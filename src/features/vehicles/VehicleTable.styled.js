@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 export const TableContainer = styled.div`
   width: 100%;
-  overflow-x: auto; /* Дозволяє скролити по горизонталі */
+  overflow-x: auto;
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -10,9 +10,9 @@ export const TableContainer = styled.div`
 
 export const Table = styled.table`
   width: 100%;
-  border-collapse: separate; /* Важливо для sticky */
+  border-collapse: separate;
   border-spacing: 0;
-  min-width: 800px; /* Мінімальна ширина, щоб було що скролити */
+  min-width: 1200px; /* Зробив ширше, щоб було куди скролити */
 `;
 
 export const Th = styled.th`
@@ -25,7 +25,7 @@ export const Th = styled.th`
 
 export const StickyTh = styled(Th)`
   position: sticky;
-  z-index: 2; /* Щоб стовпці були поверх іншого контенту */
+  z-index: 10; /* Підняв z-index */
   background: #f8fafc;
 `;
 
@@ -37,15 +37,16 @@ export const Td = styled.td`
 
 export const StickyTd = styled(Td)`
   position: sticky;
-  z-index: 1;
-  background: white; /* Колір фону має бути таким же як у рядка */
+  z-index: 5;
+  background: white; /* Це лікує налізання тексту! */
 `;
 
 export const Tr = styled.tr`
   &:hover td {
     background: #f1f5f9;
   }
+  /* Щоб при наведенні липкі комірки теж підсвічувалися */
   &:hover ${StickyTd} {
     background: #f1f5f9;
-  } /* Щоб липкі комірки теж підсвічувались */
+  }
 `;

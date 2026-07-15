@@ -39,6 +39,20 @@ export const DetailsSection = styled.div`
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Відстань між блоками (Основні, Паливо, Телематика) */
+`;
+
+export const SectionTitle = styled.h4`
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+export const DetailsGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;

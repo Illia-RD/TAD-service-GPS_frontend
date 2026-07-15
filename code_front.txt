@@ -1,0 +1,479 @@
+frontend/
+├── index.html          # Головний HTML-файл (точка входу Vite)
+├── package.json        # Залежності проекту
+├── vite.config.js      # Налаштування Vite
+└── src/
+    ├── main.jsx        # Точка входу React
+    ├── App.jsx         # Головний компонент (роутинг)
+    │
+    ├── components/     # Перевикористовувані UI-елементи
+    │   ├── ui/         # Кнопки, інпути, модалки
+    │   └── Kanban/     # Специфічні компоненти дошки
+    │       ├── Board.jsx
+    │       └── Column.jsx
+    │
+    ├── features/       # Логічно розділені модулі (доменна логіка)
+    │   ├── tickets/    # Все про задачі
+    │   │   ├── TicketCard.jsx
+    │   │   └── TicketModal.jsx
+    │   └── vehicles/   # Все про автомобілі
+    │       ├── VehicleList.jsx
+    │       └── VehicleCard.jsx
+    │
+    ├── hooks/          # Кастомні React-хуки (напр. useTickets, useTraccarWebsocket)
+    ├── services/       # Запити до API (axios/fetch)
+    │   └── api.js      
+    └── utils/          # Допоміжні функції (форматування дат, підрахунок годин)
+    
+//main.jsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+//app.jsx
+import React from 'react';
+import { VehicleList } from './features/vehicles/VehicleList';
+import { AppContainer, Header, Title } from './App.styled';
+
+export default function App() {
+  return (
+    <AppContainer>
+      <Header>
+        <Title>TAD Service GPS</Title>
+      </Header>
+      <VehicleList />
+    </AppContainer>
+  );
+}
+
+//VehicleList
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Plus, LayoutGrid, List as ListIcon } from 'lucide-react';
+import { VehicleCard } from './VehicleCard';
+import { VehicleForm } from './VehicleForm';
+import { VehicleModal } from './VehicleModal';
+import { VehicleTable } from './VehicleTable'; // Переконайся, що цей файл існує
+import { ListWrapper } from './VehicleList.styled';
+
+export const VehicleList = () => {
+  const [vehicles, setVehicles] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('card'); // 'card' або 'table'
+
+  const loadVehicles = () => {
+    axios
+      .get('http://127.0.0.1:8000/api/vehicles/')
+      .then(res => setVehicles(res.data))
+      .catch(err => console.error('Помилка при завантаженні авто:', err));
+  };
+
+  useEffect(() => {
+    loadVehicles();
+  }, []);
+
+  return (
+    <>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            background: '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={20} /> Створити
+        </button>
+
+        <button
+          onClick={() => setViewMode('card')}
+          style={{ padding: '10px', cursor: 'pointer' }}
+        >
+          <LayoutGrid size={20} />
+        </button>
+        <button
+          onClick={() => setViewMode('table')}
+          style={{ padding: '10px', cursor: 'pointer' }}
+        >
+          <ListIcon size={20} />
+        </button>
+      </div>
+
+      <VehicleModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <VehicleForm
+          onVehicleAdded={() => {
+            loadVehicles();
+            setIsModalOpen(false);
+          }}
+        />
+      </VehicleModal>
+
+      {viewMode === 'card' ? (
+        <ListWrapper>
+          {vehicles.map(v => (
+            <VehicleCard key={v.id} vehicle={v} />
+          ))}
+        </ListWrapper>
+      ) : (
+        <VehicleTable vehicles={vehicles} />
+      )}
+    </>
+  );
+};
+
+
+//vehicleForm
+import React, { useState } from 'react';
+import axios from 'axios';
+import {
+  FormWrapper,
+  Input,
+  Button,
+  Select,
+  FormGroup,
+  Label,
+  SectionTitle,
+} from './VehicleForm.styled';
+
+export const VehicleForm = ({ onVehicleAdded }) => {
+  const [formData, setFormData] = useState({
+    plate: '',
+    vin: '',
+    make: '',
+    model: '',
+    internal_id: '',
+    tank_volume: '',
+    tank_dimensions: '',
+    tracker_model: '',
+    tracker_sn: '',
+    tracker_imei: '',
+    sim_operator: 'Київстар',
+    sim_number: '',
+    drp_type: '',
+    drp_height: '',
+    other_equipment: '',
+  });
+
+  const handleChange = e =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    try {
+      // Відправляємо дані як float/string відповідно до структури
+      await axios.post('http://127.0.0.1:8000/api/vehicles/', {
+        ...formData,
+        tank_volume: parseFloat(formData.tank_volume) || 0,
+        drp_height: parseFloat(formData.drp_height) || 0,
+      });
+      onVehicleAdded();
+      // Очищення форми
+      setFormData({
+        plate: '',
+        vin: '',
+        make: '',
+        model: '',
+        internal_id: '',
+        tank_volume: '',
+        tank_dimensions: '',
+        tracker_model: '',
+        tracker_sn: '',
+        tracker_imei: '',
+        sim_operator: 'Київстар',
+        sim_number: '',
+        drp_type: '',
+        drp_height: '',
+        other_equipment: '',
+      });
+    } catch (err) {
+      alert('Помилка: ' + err.message);
+    }
+  };
+
+  return (
+    <FormWrapper onSubmit={handleSubmit}>
+      <SectionTitle>Загальна інформація</SectionTitle>
+      <FormGroup>
+        <div>
+          <Label>Держномер</Label>
+          <Input
+            name="plate"
+            value={formData.plate}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div>
+          <Label>VIN</Label>
+          <Input name="vin" value={formData.vin} onChange={handleChange} />
+        </div>
+        <div>
+          <Label>Марка</Label>
+          <Input name="make" value={formData.make} onChange={handleChange} />
+        </div>
+        <div>
+          <Label>Модель</Label>
+          <Input name="model" value={formData.model} onChange={handleChange} />
+        </div>
+        <div>
+          <Label>Внутрішній ID</Label>
+          <Input
+            name="internal_id"
+            value={formData.internal_id}
+            onChange={handleChange}
+          />
+        </div>
+      </FormGroup>
+
+      <SectionTitle>Паливна система</SectionTitle>
+      <FormGroup>
+        <div>
+          <Label>Об'єм баку (л)</Label>
+          <Input
+            name="tank_volume"
+            type="number"
+            value={formData.tank_volume}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>Розміри баку</Label>
+          <Input
+            name="tank_dimensions"
+            value={formData.tank_dimensions}
+            onChange={handleChange}
+          />
+        </div>
+      </FormGroup>
+
+      <SectionTitle>Обладнання</SectionTitle>
+      <FormGroup>
+        <div>
+          <Label>Модель трекера</Label>
+          <Input
+            name="tracker_model"
+            value={formData.tracker_model}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>Серійний номер</Label>
+          <Input
+            name="tracker_sn"
+            value={formData.tracker_sn}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>IMEI</Label>
+          <Input
+            name="tracker_imei"
+            value={formData.tracker_imei}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>Оператор SIM</Label>
+          <Select
+            name="sim_operator"
+            value={formData.sim_operator}
+            onChange={handleChange}
+          >
+            <option value="Київстар">Київстар</option>
+            <option value="Vodafone">Vodafone</option>
+            <option value="Lifecell">Lifecell</option>
+          </Select>
+        </div>
+        <div>
+          <Label>Номер SIM</Label>
+          <Input
+            name="sim_number"
+            value={formData.sim_number}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>Тип ДВРП</Label>
+          <Input
+            name="drp_type"
+            value={formData.drp_type}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>Висота ДВРП</Label>
+          <Input
+            name="drp_height"
+            type="number"
+            value={formData.drp_height}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>Інше</Label>
+          <Input
+            name="other_equipment"
+            value={formData.other_equipment}
+            onChange={handleChange}
+          />
+        </div>
+      </FormGroup>
+
+      <Button type="submit">Зберегти авто</Button>
+    </FormWrapper>
+  );
+};
+
+//VehicleModal
+import React from 'react';
+import { Overlay, ModalContent, CloseButton } from './VehicleModal.styled';
+
+export const VehicleModal = ({ isOpen, onClose, children }) => {
+  if (!isOpen) return null;
+  return (
+    <Overlay onClick={onClose}>
+      <ModalContent onClick={e => e.stopPropagation()}>
+        <CloseButton onClick={onClose}>&times;</CloseButton>
+        {children}
+      </ModalContent>
+    </Overlay>
+  );
+};
+
+//VehicleTable
+import React from 'react';
+import {
+  TableContainer,
+  Table,
+  Tr,
+  Th,
+  Td,
+  StickyTh,
+  StickyTd,
+} from './VehicleTable.styled';
+
+export const VehicleTable = ({ vehicles }) => (
+  <TableContainer>
+    <Table>
+      <thead>
+        <tr>
+          {/* Фіксуємо перші два стовпці */}
+          <StickyTh style={{ left: 0, width: '100px' }}>ID</StickyTh>
+          <StickyTh style={{ left: '100px', borderRight: '1px solid #e2e8f0' }}>
+            Номер
+          </StickyTh>
+
+          <Th>Марка/Модель</Th>
+          <Th>Рік</Th>
+          <Th>Євро</Th>
+          <Th>Оператор</Th>
+          <Th>Трекер</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {vehicles.map(v => (
+          <Tr key={v.id}>
+            {/* sticky комірки повинні мати той самий left, що і заголовки */}
+            <StickyTd style={{ left: 0 }}>{v.internal_id}</StickyTd>
+            <StickyTd
+              style={{
+                left: '100px',
+                borderRight: '1px solid #e2e8f0',
+                fontWeight: 'bold',
+              }}
+            >
+              {v.plate}
+            </StickyTd>
+
+            <Td>
+              {v.make} {v.model}
+            </Td>
+            <Td>{v.year || '-'}</Td>
+            <Td>{v.euro_standard || '-'}</Td>
+            <Td>{v.sim_operator}</Td>
+            <Td>{v.tracker_model}</Td>
+          </Tr>
+        ))}
+      </tbody>
+    </Table>
+  </TableContainer>
+);
+
+//VehicleCard
+import React, { useState } from 'react';
+import {
+  Card,
+  CardHeader,
+  Title,
+  Badge,
+  DetailsSection,
+  Field,
+} from './VehicleCard.styled';
+
+export const VehicleCard = ({ vehicle }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Card onClick={() => setExpanded(!expanded)}>
+      <CardHeader>
+        <Title>
+          #{vehicle.internal_id} | {vehicle.plate}
+        </Title>
+        <Badge>
+          {vehicle.make} {vehicle.model}
+        </Badge>
+      </CardHeader>
+
+      {expanded && (
+        <DetailsSection>
+          <Field>
+            VIN: <span>{vehicle.vin}</span>
+          </Field>
+          <Field>
+            Об'єм баку: <span>{vehicle.tank_volume} л</span>
+          </Field>
+          <Field>
+            Розмір баку: <span>{vehicle.tank_dimensions}</span>
+          </Field>
+          <Field>
+            Модель трекера: <span>{vehicle.tracker_model}</span>
+          </Field>
+          <Field>
+            Серійний номер: <span>{vehicle.tracker_sn}</span>
+          </Field>
+          <Field>
+            IMEI: <span>{vehicle.tracker_imei}</span>
+          </Field>
+          <Field>
+            Оператор SIM: <span>{vehicle.sim_operator}</span>
+          </Field>
+          <Field>
+            Номер SIM: <span>{vehicle.sim_number}</span>
+          </Field>
+          <Field>
+            Тип ДВРП: <span>{vehicle.drp_type}</span>
+          </Field>
+          <Field>
+            Висота ДВРП: <span>{vehicle.drp_height}</span>
+          </Field>
+          <Field>
+            Інше: <span>{vehicle.other_equipment}</span>
+          </Field>
+        </DetailsSection>
+      )}
+    </Card>
+  );
+};

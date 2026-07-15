@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Plus, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { VehicleCard } from './VehicleCard';
 import { VehicleForm } from './VehicleForm';
 import { VehicleModal } from './VehicleModal';
-import { VehicleTable } from './VehicleTable'; // Переконайся, що цей файл існує
+import { VehicleTable } from './VehicleTable';
 import { ListWrapper } from './VehicleList.styled';
+import { vehiclesApi } from '../../services/vehiclesApi';
 
 export const VehicleList = () => {
   const [vehicles, setVehicles] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('card'); // 'card' або 'table'
+
+  // Визначаємо дефолтний вигляд залежно від ширини екрану
+  const [viewMode, setViewMode] = useState(() => {
+    return window.innerWidth >= 1024 ? 'table' : 'card';
+  });
 
   const loadVehicles = () => {
-    axios
-      .get('http://127.0.0.1:8000/api/vehicles/')
-      .then(res => setVehicles(res.data))
+    vehiclesApi
+      .getAll()
+      .then(data => setVehicles(data))
       .catch(err => console.error('Помилка при завантаженні авто:', err));
   };
 
@@ -45,13 +49,25 @@ export const VehicleList = () => {
 
         <button
           onClick={() => setViewMode('card')}
-          style={{ padding: '10px', cursor: 'pointer' }}
+          style={{
+            padding: '10px',
+            cursor: 'pointer',
+            background: viewMode === 'card' ? '#e2e8f0' : 'transparent',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+          }}
         >
           <LayoutGrid size={20} />
         </button>
         <button
           onClick={() => setViewMode('table')}
-          style={{ padding: '10px', cursor: 'pointer' }}
+          style={{
+            padding: '10px',
+            cursor: 'pointer',
+            background: viewMode === 'table' ? '#e2e8f0' : 'transparent',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+          }}
         >
           <ListIcon size={20} />
         </button>
