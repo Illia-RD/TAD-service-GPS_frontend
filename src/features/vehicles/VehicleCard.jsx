@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Edit2 } from 'lucide-react';
 import {
   Card,
   CardHeader,
@@ -10,28 +11,81 @@ import {
   Field,
 } from './VehicleCard.styled';
 
-export const VehicleCard = ({ vehicle }) => {
+export const VehicleCard = ({ vehicle, onEdit }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <Card onClick={() => setExpanded(!expanded)}>
       <CardHeader>
-        <Title>
-          #{vehicle.internal_id} | {vehicle.plate}
-        </Title>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <Badge style={{ background: '#dbeafe', color: '#1e40af' }}>
-            {vehicle.group_name}
-          </Badge>
-          <Badge>
-            {vehicle.make} {vehicle.model}
-          </Badge>
+        {/* Головний обгортковий контейнер, який змушує блоки йти один під одним */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            gap: '10px',
+          }}
+        >
+          {/* ВЕРХНІЙ РЯДОК: Заголовок + Кнопка */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '12px',
+              width: '100%',
+            }}
+          >
+            <Title
+              style={{
+                margin: 0,
+                flex: '1 1 0%',
+                lineHeight: '1.3',
+                wordBreak: 'break-word',
+              }}
+            >
+              #{vehicle.internal_id} | {vehicle.plate}
+            </Title>
+
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                if (onEdit) onEdit(vehicle);
+              }}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                cursor: 'pointer',
+                color: '#64748b',
+                padding: 0,
+              }}
+              title="Редагувати"
+            >
+              <Edit2 size={14} />
+            </button>
+          </div>
+
+          {/* НИЖНІЙ РЯДОК: Бейджі */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <Badge style={{ background: '#dbeafe', color: '#1e40af' }}>
+              {vehicle.group_name}
+            </Badge>
+            <Badge>
+              {vehicle.make} {vehicle.model}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
 
       {expanded && (
         <DetailsSection>
-          {/* Блок 1: Основні дані */}
           <div>
             <SectionTitle>Основна інформація</SectionTitle>
             <DetailsGrid>
@@ -47,7 +101,6 @@ export const VehicleCard = ({ vehicle }) => {
             </DetailsGrid>
           </div>
 
-          {/* Блок 2: Паливна система */}
           <div>
             <SectionTitle>Паливна система</SectionTitle>
             <DetailsGrid>
@@ -63,7 +116,6 @@ export const VehicleCard = ({ vehicle }) => {
             </DetailsGrid>
           </div>
 
-          {/* Блок 3: Обладнання */}
           <div>
             <SectionTitle>Телематика та Обладнання</SectionTitle>
             <DetailsGrid>

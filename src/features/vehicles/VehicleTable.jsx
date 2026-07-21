@@ -1,4 +1,5 @@
 import React from 'react';
+import { Edit2 } from 'lucide-react'; // Додали Edit2
 import {
   TableContainer,
   Table,
@@ -9,12 +10,13 @@ import {
   StickyTd,
 } from './VehicleTable.styled';
 
-export const VehicleTable = ({ vehicles }) => (
+// Додали пропс onEdit
+export const VehicleTable = ({ vehicles, onEdit }) => (
   <TableContainer>
     <Table>
       <thead>
         <tr>
-          {/* Фіксуємо ширину і відступи */}
+          {/* Фіксуємо ширину і відступи зліва */}
           <StickyTh
             style={{
               left: 0,
@@ -49,6 +51,21 @@ export const VehicleTable = ({ vehicles }) => (
           <Th>Номер SIM</Th>
           <Th>ДВРП (Тип/Висота)</Th>
           <Th>Інше обладнання</Th>
+
+          {/* НОВА ЗАКРІПЛЕНА КОЛОНКА СПРАВА */}
+          <StickyTh
+            style={{
+              right: 0,
+              width: '60px',
+              minWidth: '60px',
+              maxWidth: '60px',
+              borderLeft: '2px solid #cbd5e1',
+              textAlign: 'center',
+              background: '#f8fafc',
+            }}
+          >
+            Дії
+          </StickyTh>
         </tr>
       </thead>
       <tbody>
@@ -60,6 +77,7 @@ export const VehicleTable = ({ vehicles }) => (
                 width: '80px',
                 minWidth: '80px',
                 maxWidth: '80px',
+                background: 'white', // Обов'язково фон, щоб не просвічувалось
               }}
             >
               {v.internal_id}
@@ -72,6 +90,7 @@ export const VehicleTable = ({ vehicles }) => (
                 maxWidth: '120px',
                 borderRight: '2px solid #cbd5e1',
                 fontWeight: 'bold',
+                background: 'white', // Обов'язково фон
               }}
             >
               {v.plate}
@@ -99,6 +118,36 @@ export const VehicleTable = ({ vehicles }) => (
               {v.drp_type} {v.drp_height ? `(${v.drp_height} мм)` : ''}
             </Td>
             <Td>{v.other_equipment}</Td>
+
+            {/* НОВА ЗАКРІПЛЕНА КОЛОНКА СПРАВА ДЛЯ ОЛІВЦЯ */}
+            <StickyTd
+              style={{
+                right: 0,
+                width: '60px',
+                minWidth: '60px',
+                maxWidth: '60px',
+                borderLeft: '2px solid #cbd5e1',
+                textAlign: 'center',
+                background: 'white', // Обов'язково фон
+              }}
+            >
+              <button
+                onClick={() => onEdit(v)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '6px',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  display: 'flex',
+                  margin: '0 auto', // Центруємо
+                }}
+                title="Редагувати"
+              >
+                <Edit2 size={14} />
+              </button>
+            </StickyTd>
           </Tr>
         ))}
       </tbody>

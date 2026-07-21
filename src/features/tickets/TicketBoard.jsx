@@ -18,7 +18,10 @@ const COLUMNS = [
 export const TicketBoard = () => {
   const [tickets, setTickets] = useState([]);
   const [vehicles, setVehicles] = useState([]);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // ДОДАНО: Стан для тікета, який зараз редагується
+  const [editingTicket, setEditingTicket] = useState(null);
 
   const loadData = async () => {
     try {
@@ -37,22 +40,35 @@ export const TicketBoard = () => {
     loadData();
   }, []);
 
-  // ФУНКЦІЯ ОНОВЛЕННЯ СТАТУСУ
   const handleStatusChange = async (ticketId, newStatus) => {
     try {
       await ticketsApi.updateStatus(ticketId, newStatus);
-      // Просто перетягуємо дані заново, щоб дошка оновилася
       loadData();
     } catch (error) {
       alert('Помилка при зміні статусу: ' + error.message);
     }
   };
 
+  // ДОДАНО: Функція для відкриття модалки в режимі редагування
+  const handleEdit = ticket => {
+    setEditingTicket(ticket);
+    setIsModalOpen(true);
+  };
+
+  // ДОДАНО: Функція для закриття модалки і очищення стану
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTicket(null);
+  };
+
   return (
     <>
       <div style={{ marginBottom: '20px' }}>
         <button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            setEditingTicket(null); // Скидаємо стан редагування при створенні нового
+            setIsModalOpen(true);
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -69,14 +85,13 @@ export const TicketBoard = () => {
         </button>
       </div>
 
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-      >
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal}>
         <TicketForm
+          initialData={editingTicket} // ДОДАНО: Передаємо дані тікета у форму
+          onCancelEdit={handleCloseModal} // ДОДАНО: Кнопка "Скасувати" з форми закриє модалку
           onTicketAdded={() => {
             loadData();
-            setIsCreateModalOpen(false);
+            handleCloseModal();
           }}
         />
       </Modal>
@@ -88,10 +103,10 @@ export const TicketBoard = () => {
           return (
             <Column
               key={col.id}
-              id={col.id} // Обов'язково передаємо ID колонки!
+              id={col.id}
               title={col.title}
               count={columnTickets.length}
-              onDrop={handleStatusChange} // Передаємо функцію оновлення статусу
+              onDrop={handleStatusChange}
             >
               {columnTickets.map(ticket => {
                 const vehicle = vehicles.find(v => v.id === ticket.vehicle_id);
@@ -101,6 +116,7 @@ export const TicketBoard = () => {
                     ticket={ticket}
                     vehicle={vehicle}
                     onStatusChange={handleStatusChange}
+                    onEdit={handleEdit} // ДОДАНО: Передаємо функцію редагування в картку
                   />
                 );
               })}

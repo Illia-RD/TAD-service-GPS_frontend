@@ -46,4 +46,16 @@ export const vehiclesApi = {
     const response = await axios.post(BASE_URL, payload);
     return mapVehicleData(response.data);
   },
+  update: async (id, formData) => {
+    // Така ж підготовка даних, як і при створенні
+    const payload = {
+      ...formData,
+      tank_volume: parseFloat(formData.tank_volume) || 0,
+      drp_height: parseFloat(formData.drp_height) || 0,
+      year: parseInt(formData.year) || null,
+    };
+    // Відправляємо PUT запит на адресу конкретного авто (наприклад: /api/vehicles/5/)
+    const response = await axios.put(`${BASE_URL}${id}/`, payload);
+    return mapVehicleData(response.data);
+  },
 };

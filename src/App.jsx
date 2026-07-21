@@ -13,13 +13,13 @@ export default function App() {
         <Title>TAD Service GPS</Title>
         <Nav>
           <TabButton
-            active={activeTab === 'vehicles'}
+            $active={activeTab === 'vehicles'}
             onClick={() => setActiveTab('vehicles')}
           >
             Автопарк
           </TabButton>
           <TabButton
-            active={activeTab === 'tickets'}
+            $active={activeTab === 'tickets'}
             onClick={() => setActiveTab('tickets')}
           >
             Сервісні роботи

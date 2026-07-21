@@ -40,10 +40,10 @@ export const TabButton = styled.button`
   cursor: pointer;
   transition: all 0.2s;
 
-  background-color: ${props => (props.active ? '#2563eb' : '#e2e8f0')};
-  color: ${props => (props.active ? 'white' : '#64748b')};
+  background-color: ${props => (props.$active ? '#2563eb' : '#e2e8f0')};
+  color: ${props => (props.$active ? 'white' : '#64748b')};
 
   &:hover {
-    background-color: ${props => (props.active ? '#1d4ed8' : '#cbd5e1')};
+    background-color: ${props => (props.$active ? '#1d4ed8' : '#cbd5e1')};
   }
 `;

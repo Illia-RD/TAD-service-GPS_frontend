@@ -11,7 +11,9 @@ export const VehicleList = () => {
   const [vehicles, setVehicles] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Визначаємо дефолтний вигляд залежно від ширини екрану
+  // ДОДАНО: Стан для збереження авто, яке ми зараз редагуємо
+  const [editingVehicle, setEditingVehicle] = useState(null);
+
   const [viewMode, setViewMode] = useState(() => {
     return window.innerWidth >= 1024 ? 'table' : 'card';
   });
@@ -27,11 +29,26 @@ export const VehicleList = () => {
     loadVehicles();
   }, []);
 
+  // ДОДАНО: Функція для відкриття модалки в режимі редагування
+  const handleEdit = vehicle => {
+    setEditingVehicle(vehicle);
+    setIsModalOpen(true);
+  };
+
+  // ДОДАНО: Функція для закриття модалки і очищення стану редагування
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingVehicle(null);
+  };
+
   return (
     <>
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingVehicle(null); // Якщо натиснули "Створити", скидаємо редагування
+            setIsModalOpen(true);
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -73,11 +90,13 @@ export const VehicleList = () => {
         </button>
       </div>
 
-      <VehicleModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+      <VehicleModal isOpen={isModalOpen} onClose={handleCloseModal}>
         <VehicleForm
+          initialData={editingVehicle} // ДОДАНО: передаємо дані у форму
+          onCancelEdit={handleCloseModal} // ДОДАНО: кнопка скасування
           onVehicleAdded={() => {
             loadVehicles();
-            setIsModalOpen(false);
+            handleCloseModal();
           }}
         />
       </VehicleModal>
@@ -85,11 +104,18 @@ export const VehicleList = () => {
       {viewMode === 'card' ? (
         <ListWrapper>
           {vehicles.map(v => (
-            <VehicleCard key={v.id} vehicle={v} />
+            <VehicleCard
+              key={v.id}
+              vehicle={v}
+              onEdit={handleEdit} // ДОДАНО: прокидаємо функцію в картку
+            />
           ))}
         </ListWrapper>
       ) : (
-        <VehicleTable vehicles={vehicles} />
+        <VehicleTable
+          vehicles={vehicles}
+          onEdit={handleEdit} // ДОДАНО: прокидаємо функцію в таблицю
+        />
       )}
     </>
   );

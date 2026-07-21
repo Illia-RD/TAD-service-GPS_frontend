@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import CreatableSelect from 'react-select/creatable';
 import {
   FormWrapper,
   Input,
   Button,
-  Select,
   FormGroup,
   Label,
   SectionTitle,
 } from './VehicleForm.styled';
-import { vehiclesApi } from '../../services/vehiclesApi'; // Наш новий сервіс
+import { vehiclesApi } from '../../services/vehiclesApi';
+import { dictionariesApi } from '../../services/dictionariesApi';
 
-export const VehicleForm = ({ onVehicleAdded }) => {
-  // Виносимо початковий стан в окрему змінну, щоб легко очищати форму
+export const VehicleForm = ({ onVehicleAdded, initialData, onCancelEdit }) => {
+  const isEditMode = !!initialData;
+
   const initialFormState = {
     plate: '',
     vin: '',
@@ -20,13 +22,13 @@ export const VehicleForm = ({ onVehicleAdded }) => {
     internal_id: '',
     year: '',
     euro_standard: '',
-    group_name: 'Без групи',
+    group_name: '',
     tank_volume: '',
     tank_dimensions: '',
     tracker_model: '',
     tracker_sn: '',
     tracker_imei: '',
-    sim_operator: 'Київстар',
+    sim_operator: '',
     sim_number: '',
     drp_type: '',
     drp_height: '',
@@ -34,26 +36,158 @@ export const VehicleForm = ({ onVehicleAdded }) => {
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  const [isLoadingDicts, setIsLoadingDicts] = useState(true);
+
+  // Стани для зберігання опцій усіх довідників
+  const [dicts, setDicts] = useState({
+    makes: [],
+    models: [],
+    drpTypes: [],
+    euroStandards: [],
+    trackerModels: [],
+    simOperators: [],
+    groups: [],
+  });
+
+  useEffect(() => {
+    const loadDictionaries = async () => {
+      try {
+        const [makes, models, drpTypes, euro, trackers, sims, groups] =
+          await Promise.all([
+            dictionariesApi.makes.getAll(),
+            dictionariesApi.models.getAll(),
+            dictionariesApi.drpTypes.getAll(),
+            dictionariesApi.euroStandards.getAll(),
+            dictionariesApi.trackerModels.getAll(),
+            dictionariesApi.simOperators.getAll(),
+            dictionariesApi.groups.getAll(),
+          ]);
+
+        const toOptions = arr =>
+          arr.map(i => ({ value: i.name, label: i.name }));
+
+        setDicts({
+          makes: toOptions(makes),
+          models: toOptions(models),
+          drpTypes: toOptions(drpTypes),
+          euroStandards: toOptions(euro),
+          trackerModels: toOptions(trackers),
+          simOperators: toOptions(sims),
+          groups: toOptions(groups),
+        });
+      } catch (error) {
+        console.error('Помилка завантаження довідників:', error);
+      } finally {
+        setIsLoadingDicts(false);
+      }
+    };
+    loadDictionaries();
+  }, []);
+
+  useEffect(() => {
+    if (initialData) {
+      const sanitizedData = Object.keys(initialFormState).reduce((acc, key) => {
+        acc[key] =
+          initialData[key] != null ? initialData[key] : initialFormState[key];
+        return acc;
+      }, {});
+      setFormData(sanitizedData);
+    } else {
+      setFormData(initialFormState);
+    }
+  }, [initialData]);
 
   const handleChange = e =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-    try {
-      // Відправляємо дані через сервіс, який сам їх розпарсить (числа в числа і т.д.)
-      await vehiclesApi.create(formData);
-      onVehicleAdded();
-
-      // Очищуємо форму до початкового стану
-      setFormData(initialFormState);
-    } catch (err) {
-      alert('Помилка: ' + err.message);
+  // УНІВЕРСАЛЬНИЙ ОБРОБНИК ДЛЯ ВСІХ РОЗУМНИХ СЕЛЕКТІВ
+  const handleSmartSelect = async (
+    newValue,
+    actionMeta,
+    fieldName,
+    dictName,
+    apiDict
+  ) => {
+    if (actionMeta.action === 'create-option') {
+      try {
+        const created = await apiDict.create(newValue.value);
+        setDicts(prev => ({
+          ...prev,
+          [dictName]: [
+            ...prev[dictName],
+            { value: created.name, label: created.name },
+          ],
+        }));
+        setFormData(prev => ({ ...prev, [fieldName]: created.name }));
+      } catch (err) {
+        alert(`Помилка створення запису в довіднику`);
+      }
+    } else if (newValue) {
+      setFormData(prev => ({ ...prev, [fieldName]: newValue.value }));
+    } else {
+      setFormData(prev => ({ ...prev, [fieldName]: '' }));
     }
   };
 
+  const handleSubmit = async e => {
+    e.preventDefault();
+    try {
+      if (isEditMode) await vehiclesApi.update(initialData.id, formData);
+      else await vehiclesApi.create(formData);
+      onVehicleAdded();
+      if (!isEditMode) setFormData(initialFormState);
+    } catch (err) {
+      alert(`Помилка: ` + err.message);
+    }
+  };
+
+  const selectStyles = {
+    control: base => ({
+      ...base,
+      borderColor: '#cbd5e1',
+      borderRadius: '6px',
+      padding: '2px',
+      boxShadow: 'none',
+      '&:hover': { borderColor: '#94a3b8' },
+    }),
+  };
+
+  // Компонент-обгортка для зменшення дублювання коду в JSX
+  const SmartSelectField = ({ label, fieldName, dictName, apiDict }) => (
+    <div>
+      <Label>{label}</Label>
+      <CreatableSelect
+        isClearable
+        isDisabled={isLoadingDicts}
+        isLoading={isLoadingDicts}
+        options={dicts[dictName]}
+        value={
+          formData[fieldName]
+            ? { value: formData[fieldName], label: formData[fieldName] }
+            : null
+        }
+        onChange={(val, meta) =>
+          handleSmartSelect(val, meta, fieldName, dictName, apiDict)
+        }
+        placeholder="Оберіть або введіть..."
+        formatCreateLabel={val => `Створити "${val}"`}
+        styles={selectStyles}
+      />
+    </div>
+  );
+
   return (
     <FormWrapper onSubmit={handleSubmit}>
+      <h3
+        style={{
+          marginTop: 0,
+          paddingBottom: '10px',
+          borderBottom: '2px solid #e2e8f0',
+        }}
+      >
+        {isEditMode ? 'Редагування автомобіля' : 'Новий автомобіль'}
+      </h3>
+
       <SectionTitle>Загальна інформація</SectionTitle>
       <FormGroup>
         <div>
@@ -74,24 +208,18 @@ export const VehicleForm = ({ onVehicleAdded }) => {
             required
           />
         </div>
-        <div>
-          <Label>Марка</Label>
-          <Input
-            name="make"
-            value={formData.make}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div>
-          <Label>Модель</Label>
-          <Input
-            name="model"
-            value={formData.model}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        <SmartSelectField
+          label="Марка"
+          fieldName="make"
+          dictName="makes"
+          apiDict={dictionariesApi.makes}
+        />
+        <SmartSelectField
+          label="Модель"
+          fieldName="model"
+          dictName="models"
+          apiDict={dictionariesApi.models}
+        />
         <div>
           <Label>VIN-код</Label>
           <Input name="vin" value={formData.vin} onChange={handleChange} />
@@ -105,33 +233,18 @@ export const VehicleForm = ({ onVehicleAdded }) => {
             onChange={handleChange}
           />
         </div>
-        <div>
-          <Label>Еко-стандарт</Label>
-          <Select
-            name="euro_standard"
-            value={formData.euro_standard}
-            onChange={handleChange}
-          >
-            <option value="">Без стандарту</option>
-            <option value="Євро 3">Євро 3</option>
-            <option value="Євро 4">Євро 4</option>
-            <option value="Євро 5">Євро 5</option>
-            <option value="Євро 6">Євро 6</option>
-          </Select>
-        </div>
-        <div>
-          <Label>Група авто</Label>
-          <Select
-            name="group_name"
-            value={formData.group_name}
-            onChange={handleChange}
-          >
-            <option value="Без групи">Без групи</option>
-            <option value="Україна">Україна</option>
-            <option value="Європа">Європа</option>
-            <option value="Volvo">Volvo</option>
-          </Select>
-        </div>
+        <SmartSelectField
+          label="Еко-стандарт"
+          fieldName="euro_standard"
+          dictName="euroStandards"
+          apiDict={dictionariesApi.euroStandards}
+        />
+        <SmartSelectField
+          label="Група авто"
+          fieldName="group_name"
+          dictName="groups"
+          apiDict={dictionariesApi.groups}
+        />
       </FormGroup>
 
       <SectionTitle>Паливна система</SectionTitle>
@@ -158,14 +271,12 @@ export const VehicleForm = ({ onVehicleAdded }) => {
 
       <SectionTitle>Обладнання</SectionTitle>
       <FormGroup>
-        <div>
-          <Label>Модель трекера</Label>
-          <Input
-            name="tracker_model"
-            value={formData.tracker_model}
-            onChange={handleChange}
-          />
-        </div>
+        <SmartSelectField
+          label="Модель трекера"
+          fieldName="tracker_model"
+          dictName="trackerModels"
+          apiDict={dictionariesApi.trackerModels}
+        />
         <div>
           <Label>Серійний номер</Label>
           <Input
@@ -182,18 +293,12 @@ export const VehicleForm = ({ onVehicleAdded }) => {
             onChange={handleChange}
           />
         </div>
-        <div>
-          <Label>Оператор SIM</Label>
-          <Select
-            name="sim_operator"
-            value={formData.sim_operator}
-            onChange={handleChange}
-          >
-            <option value="Київстар">Київстар</option>
-            <option value="Vodafone">Vodafone</option>
-            <option value="Lifecell">Lifecell</option>
-          </Select>
-        </div>
+        <SmartSelectField
+          label="Оператор SIM"
+          fieldName="sim_operator"
+          dictName="simOperators"
+          apiDict={dictionariesApi.simOperators}
+        />
         <div>
           <Label>Номер SIM</Label>
           <Input
@@ -202,14 +307,12 @@ export const VehicleForm = ({ onVehicleAdded }) => {
             onChange={handleChange}
           />
         </div>
-        <div>
-          <Label>Тип ДВРП</Label>
-          <Input
-            name="drp_type"
-            value={formData.drp_type}
-            onChange={handleChange}
-          />
-        </div>
+        <SmartSelectField
+          label="Тип ДВРП"
+          fieldName="drp_type"
+          dictName="drpTypes"
+          apiDict={dictionariesApi.drpTypes}
+        />
         <div>
           <Label>Висота ДВРП</Label>
           <Input
@@ -230,9 +333,20 @@ export const VehicleForm = ({ onVehicleAdded }) => {
         </div>
       </FormGroup>
 
-      <Button type="submit" style={{ width: '100%', marginTop: '10px' }}>
-        Зберегти авто
-      </Button>
+      <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+        <Button type="submit" style={{ flex: 1 }}>
+          {isEditMode ? 'Зберегти зміни' : 'Додати авто'}
+        </Button>
+        {isEditMode && (
+          <Button
+            type="button"
+            onClick={onCancelEdit}
+            style={{ flex: 1, background: '#94a3b8' }}
+          >
+            Скасувати
+          </Button>
+        )}
+      </div>
     </FormWrapper>
   );
 };

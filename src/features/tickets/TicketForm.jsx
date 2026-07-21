@@ -21,21 +21,40 @@ const STANDARD_TASKS = [
   'Діагностика',
 ];
 
-export const TicketForm = ({ onTicketAdded }) => {
+export const TicketForm = ({ onTicketAdded, initialData, onCancelEdit }) => {
   const [vehicles, setVehicles] = useState([]);
 
+  // Визначаємо, чи ми зараз в режимі редагування
+  const isEditMode = !!initialData;
+
+  // Форматування дати для <input type="date"> (потрібен формат YYYY-MM-DD)
+  const formatDateForInput = dateString => {
+    if (!dateString) return '';
+    return dateString.split('T')[0];
+  };
+
   const initialForm = {
-    vehicle_id: '',
-    priority: 'medium',
-    ticket_group: 'Механіки',
-    planned_at: '',
-    comment: '',
+    vehicle_id: initialData?.vehicle_id || '',
+    priority: initialData?.priority || 'medium',
+    ticket_group: initialData?.ticket_group || 'Механіки',
+    planned_at: formatDateForInput(initialData?.planned_at),
+    comment: initialData?.comment || '',
   };
   const [formData, setFormData] = useState(initialForm);
 
-  // Стан для задач
-  const [selectedTasks, setSelectedTasks] = useState([]);
-  const [taskInput, setTaskInput] = useState(''); // Для вводу вручну
+  // Стан для задач: тепер це масив ОБ'ЄКТІВ { id, description, is_completed }
+  const [selectedTasks, setSelectedTasks] = useState(() => {
+    if (initialData?.tasks) {
+      return initialData.tasks.map(t => ({
+        id: t.id,
+        description: t.description,
+        is_completed: t.is_completed || false,
+      }));
+    }
+    return [];
+  });
+
+  const [taskInput, setTaskInput] = useState('');
 
   useEffect(() => {
     vehiclesApi.getAll().then(data => setVehicles(data));
@@ -44,16 +63,22 @@ export const TicketForm = ({ onTicketAdded }) => {
   const handleChange = e =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // Логіка додавання задачі
+  // Оновлена логіка додавання задачі (зберігаємо як об'єкт)
   const addTask = taskDesc => {
-    if (taskDesc && !selectedTasks.includes(taskDesc)) {
-      setSelectedTasks([...selectedTasks, taskDesc]);
+    const desc = taskDesc.trim();
+    // Перевіряємо, чи немає вже задачі з таким текстом
+    if (desc && !selectedTasks.find(t => t.description === desc)) {
+      setSelectedTasks([
+        ...selectedTasks,
+        { id: null, description: desc, is_completed: false },
+      ]);
     }
-    setTaskInput(''); // Очищаємо поле після вводу
+    setTaskInput('');
   };
 
-  const removeTask = taskToRemove => {
-    setSelectedTasks(selectedTasks.filter(t => t !== taskToRemove));
+  // Оновлена логіка видалення задачі (тепер по індексу, бо це об'єкти)
+  const removeTask = indexToRemove => {
+    setSelectedTasks(selectedTasks.filter((_, idx) => idx !== indexToRemove));
   };
 
   const handleSubmit = async e => {
@@ -68,15 +93,37 @@ export const TicketForm = ({ onTicketAdded }) => {
         planned_at: formData.planned_at
           ? new Date(formData.planned_at).toISOString()
           : null,
-        tasks: selectedTasks, // Відправляємо наш масив задач на бекенд
       };
 
-      await ticketsApi.create(payload);
+      if (isEditMode) {
+        // РЕДАГУВАННЯ: відправляємо масив об'єктів
+        payload.tasks = selectedTasks;
+        await ticketsApi.update(initialData.id, payload);
+      } else {
+        // СТВОРЕННЯ: відправляємо масив рядків (як бекенд чекав раніше)
+        payload.tasks = selectedTasks.map(t => t.description);
+        await ticketsApi.create(payload);
+      }
+
       onTicketAdded();
-      setFormData(initialForm);
-      setSelectedTasks([]); // Очищаємо задачі
+
+      if (isEditMode && onCancelEdit) {
+        onCancelEdit(); // Закриваємо модалку редагування
+      } else {
+        // Очищаємо форму після створення нового тікета
+        setFormData({
+          vehicle_id: '',
+          priority: 'medium',
+          ticket_group: 'Механіки',
+          planned_at: '',
+          comment: '',
+        });
+        setSelectedTasks([]);
+      }
     } catch (err) {
-      alert('Помилка при створенні: ' + err.message);
+      alert(
+        `Помилка при ${isEditMode ? 'оновленні' : 'створенні'}: ` + err.message
+      );
     }
   };
 
@@ -89,7 +136,7 @@ export const TicketForm = ({ onTicketAdded }) => {
           paddingBottom: '10px',
         }}
       >
-        Новий сервісний тікет
+        {isEditMode ? 'Редагування тікета' : 'Новий сервісний тікет'}
       </h3>
 
       <FormGroup className="full-width">
@@ -180,16 +227,27 @@ export const TicketForm = ({ onTicketAdded }) => {
                 color: '#1e293b',
               }}
             >
-              {selectedTasks.map(task => (
-                <li key={task} style={{ marginBottom: '5px' }}>
-                  {task}{' '}
+              {selectedTasks.map((task, idx) => (
+                <li key={idx} style={{ marginBottom: '5px' }}>
+                  {/* Відображаємо description об'єкта, а не сам об'єкт */}
                   <span
-                    onClick={() => removeTask(task)}
+                    style={{
+                      textDecoration: task.is_completed
+                        ? 'line-through'
+                        : 'none',
+                      color: task.is_completed ? '#94a3b8' : 'inherit',
+                    }}
+                  >
+                    {task.description}
+                  </span>
+                  <span
+                    onClick={() => removeTask(idx)} // Передаємо індекс на видалення
                     style={{
                       color: 'red',
                       cursor: 'pointer',
                       marginLeft: '10px',
                     }}
+                    title="Видалити задачу"
                   >
                     ✖
                   </span>
@@ -219,11 +277,39 @@ export const TicketForm = ({ onTicketAdded }) => {
             value={formData.priority}
             onChange={handleChange}
           >
-            <option value="medium">Низький</option>
+            <option value="low">Низький</option>
             <option value="medium">Середній</option>
-            <option value="medium">Високий</option>
+            <option value="high">Високий</option>
             <option value="critical">Критичний</option>
           </Select>
+        </div>
+        <div style={{ marginBottom: '15px' }}>
+          <label
+            style={{
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: '#475569',
+              display: 'block',
+              marginBottom: '4px',
+            }}
+          >
+            Запланована дата робіт (опціонально)
+          </label>
+          <input
+            type="date"
+            value={formData.planned_at}
+            onChange={e =>
+              setFormData({ ...formData, planned_at: e.target.value })
+            }
+            style={{
+              width: '100%',
+              padding: '8px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              fontFamily: 'inherit',
+              color: '#1e293b',
+            }}
+          />
         </div>
       </FormGroup>
 
@@ -247,9 +333,23 @@ export const TicketForm = ({ onTicketAdded }) => {
         </div>
       </FormGroup>
 
-      <Button type="submit">
-        Створити тікет ({selectedTasks.length} задач)
-      </Button>
+      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+        <Button type="submit" style={{ flex: 1 }}>
+          {isEditMode
+            ? 'Зберегти зміни'
+            : `Створити тікет (${selectedTasks.length} задач)`}
+        </Button>
+
+        {isEditMode && (
+          <Button
+            type="button"
+            onClick={onCancelEdit}
+            style={{ flex: 1, background: '#94a3b8' }}
+          >
+            Скасувати
+          </Button>
+        )}
+      </div>
     </FormWrapper>
   );
 };

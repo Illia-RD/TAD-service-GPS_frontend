@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Edit2 } from 'lucide-react'; // Додали Edit2
 import {
   CardContainer,
   CardHeader,
@@ -8,7 +8,7 @@ import {
   CardTitle,
   CardFooter,
 } from './Ticket.styled';
-import { ticketsApi } from '../../services/ticketsApi'; // Додаємо імпорт API
+import { ticketsApi } from '../../services/ticketsApi';
 
 const priorityColors = {
   critical: '#ef4444',
@@ -17,11 +17,11 @@ const priorityColors = {
   low: '#94a3b8',
 };
 
-export const TicketCard = ({ ticket, vehicle, onStatusChange }) => {
+// Додали пропс onEdit
+export const TicketCard = ({ ticket, vehicle, onStatusChange, onEdit }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const pColor = priorityColors[ticket.priority] || priorityColors.medium;
 
-  // Локальний стан для задач, щоб чекбокси реагували миттєво
   const [localTasks, setLocalTasks] = useState(ticket.tasks || []);
 
   useEffect(() => {
@@ -33,31 +33,27 @@ export const TicketCard = ({ ticket, vehicle, onStatusChange }) => {
     onStatusChange(ticket.id, e.target.value);
   };
 
-  // МАГІЯ ЧЕКБОКСІВ
   const handleTaskToggle = async taskId => {
-    // 1. Миттєво міняємо галочку на екрані (Оптимістичний UI)
     setLocalTasks(prev =>
       prev.map(t =>
         t.id === taskId ? { ...t, is_completed: !t.is_completed } : t
       )
     );
 
-    // 2. Відправляємо запит на сервер
     try {
       await ticketsApi.toggleTask(taskId);
     } catch (error) {
       alert('Помилка оновлення задачі');
-      setLocalTasks(ticket.tasks || []); // Якщо помилка, повертаємо як було
+      setLocalTasks(ticket.tasks || []);
     }
   };
 
   return (
     <CardContainer
-      priorityColor={pColor}
+      $priorityColor={pColor}
       draggable="true"
       onDragStart={e => e.dataTransfer.setData('ticketId', ticket.id)}
     >
-      {' '}
       <CardHeader>
         <span style={{ fontWeight: '500' }}>
           #{ticket.id} | {ticket.created_at}
@@ -82,12 +78,12 @@ export const TicketCard = ({ ticket, vehicle, onStatusChange }) => {
         </select>
       </CardHeader>
       <BadgeGroup>
-        <Badge bg="#dbeafe" color="#1d4ed8">
+        <Badge $bg="#dbeafe" $color="#1d4ed8">
           {vehicle
             ? `#${vehicle.internal_id} | ${vehicle.plate}`
             : 'Авто не знайдено'}
         </Badge>
-        <Badge bg="#fef3c7" color="#b45309">
+        <Badge $bg="#fef3c7" $color="#b45309">
           {ticket.ticket_group}
         </Badge>
       </BadgeGroup>
@@ -103,7 +99,6 @@ export const TicketCard = ({ ticket, vehicle, onStatusChange }) => {
             gap: '12px',
           }}
         >
-          {/* СПИСОК РОБІТ З АКТИВНИМИ ЧЕКБОКСАМИ */}
           {localTasks.length > 0 && (
             <div>
               <div
@@ -140,11 +135,11 @@ export const TicketCard = ({ ticket, vehicle, onStatusChange }) => {
                     <input
                       type="checkbox"
                       checked={t.is_completed}
-                      onChange={() => handleTaskToggle(t.id)} // Прикрутили виклик
+                      onChange={() => handleTaskToggle(t.id)}
                       style={{ margin: '2px 0 0 0', cursor: 'pointer' }}
                     />
                     <span
-                      onClick={() => handleTaskToggle(t.id)} // Зробили клікабельним і сам текст
+                      onClick={() => handleTaskToggle(t.id)}
                       style={{
                         textDecoration: t.is_completed
                           ? 'line-through'
@@ -162,7 +157,6 @@ export const TicketCard = ({ ticket, vehicle, onStatusChange }) => {
             </div>
           )}
 
-          {/* КОМЕНТАР */}
           {ticket.comment && (
             <div>
               <div
@@ -207,7 +201,6 @@ export const TicketCard = ({ ticket, vehicle, onStatusChange }) => {
               Додаткової інформації немає
             </div>
           )}
-          {/* ДАТИ (План, Старт, Фініш) */}
           <div
             style={{
               display: 'grid',
@@ -254,33 +247,62 @@ export const TicketCard = ({ ticket, vehicle, onStatusChange }) => {
           )}
         </div>
 
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            background: isExpanded ? '#e2e8f0' : '#f1f5f9',
-            border: 'none',
-            padding: '6px 10px',
-            borderRadius: '6px',
-            color: '#3b82f6',
-            cursor: 'pointer',
-            fontSize: '11px',
-            fontWeight: 'bold',
-            transition: 'all 0.2s',
-          }}
-        >
-          {isExpanded ? (
-            <>
-              <ChevronUp size={14} /> Згорнути
-            </>
-          ) : (
-            <>
-              <ChevronDown size={14} /> Деталі
-            </>
-          )}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {/* НОВА КНОПКА РЕДАГУВАННЯ */}
+          <button
+            onClick={e => {
+              e.stopPropagation(); // щоб при кліку на олівець не спрацьовував клік по самій картці
+              if (onEdit) {
+                onEdit(ticket);
+              } else {
+                console.log('Функція onEdit не передана!');
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              padding: '6px',
+              borderRadius: '6px',
+              color: '#64748b',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            title="Редагувати"
+          >
+            <Edit2 size={14} />
+          </button>
+
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: isExpanded ? '#e2e8f0' : '#f1f5f9',
+              border: 'none',
+              padding: '6px 10px',
+              borderRadius: '6px',
+              color: '#3b82f6',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              transition: 'all 0.2s',
+            }}
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUp size={14} /> Згорнути
+              </>
+            ) : (
+              <>
+                <ChevronDown size={14} /> Деталі
+              </>
+            )}
+          </button>
+        </div>
       </CardFooter>
     </CardContainer>
   );

@@ -1,13 +1,13 @@
 import styled from 'styled-components';
 
-
 // --- Стилі Картки ---
 export const CardContainer = styled.div`
   background: white;
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-left: 5px solid ${props => props.priorityColor || '#3b82f6'};
+  /* ДОДАЛИ $ */
+  border-left: 5px solid ${props => props.$priorityColor || '#3b82f6'};
   margin-bottom: 12px;
   cursor: grab;
 
@@ -31,8 +31,9 @@ export const BadgeGroup = styled.div`
 `;
 
 export const Badge = styled.span`
-  background: ${props => props.bg || '#f1f5f9'};
-  color: ${props => props.color || '#475569'};
+  /* ДОДАЛИ $ */
+  background: ${props => props.$bg || '#f1f5f9'};
+  color: ${props => props.$color || '#475569'};
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 11px;

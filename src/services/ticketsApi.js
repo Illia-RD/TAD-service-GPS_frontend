@@ -50,6 +50,12 @@ export const ticketsApi = {
     return mapTicketData(response.data);
   },
 
+  // ОСЬ НАШ НОВИЙ МЕТОД ОНОВЛЕННЯ
+  update: async (id, ticketData) => {
+    const response = await axios.put(`${BASE_URL}${id}`, ticketData);
+    return mapTicketData(response.data);
+  },
+
   updateStatus: async (id, status) => {
     const response = await axios.patch(`${BASE_URL}${id}/status`, { status });
     return mapTicketData(response.data);
