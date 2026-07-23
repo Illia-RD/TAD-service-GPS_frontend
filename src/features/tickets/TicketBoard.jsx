@@ -4,7 +4,7 @@ import { ticketsApi } from '../../services/ticketsApi';
 import { vehiclesApi } from '../../services/vehiclesApi';
 import { TicketCard } from './TicketCard';
 import { TicketForm } from './TicketForm';
-import { VehicleModal as Modal } from '../vehicles/VehicleModal';
+import { VehicleModal as Modal } from '../vehicles/VehicleModal/VehicleModal';
 import { Board } from '../../components/Kanban/Board';
 import { Column } from '../../components/Kanban/Column';
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VehicleList } from './features/vehicles/VehicleList';
+import { VehicleList } from './features/vehicles/VehicleList/VehicleList';
 import { TicketBoard } from './features/tickets/TicketBoard';
 import { AppContainer, Header, Title, Nav, TabButton } from './App.styled';
 

@@ -10,8 +10,7 @@ import {
   CreateButton,
   ViewModeButton,
 } from './VehicleList.styled';
-import { vehiclesApi } from '../../services/vehiclesApi';
-
+import { vehiclesApi } from '../../../services/vehiclesApi';
 export const VehicleList = () => {
   const [vehicles, setVehicles] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);

@@ -7,8 +7,8 @@ import {
   ButtonGroup,
   Button,
 } from './VehicleForm.styled';
-import { vehiclesApi } from '../../services/vehiclesApi';
-import { dictionariesApi } from '../../services/dictionariesApi';
+import { vehiclesApi } from '../../../services/vehiclesApi';
+import { dictionariesApi } from '../../../services/dictionariesApi';
 import { GeneralInfo } from './GeneralInfo/GeneralInfo';
 
 export const VehicleForm = ({

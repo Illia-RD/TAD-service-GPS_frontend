@@ -1,6 +1,7 @@
 import React from 'react';
 import CreatableSelect from 'react-select/creatable';
 import { FormGroup, Label, Input } from './GeneralInfo.styled';
+import { dictionariesApi as api } from '../../../../services/dictionariesApi';
 
 export const GeneralInfo = ({
   formData,
@@ -99,13 +100,13 @@ export const GeneralInfo = ({
         label="Марка"
         fieldName="make"
         dictName="makes"
-        apiDict={window.dictionariesApi?.makes} // Обережно, прокинемо apiDict згодом нормально
+        apiDict={api.makes}
       />
       <SmartSelectField
         label="Модель"
         fieldName="model"
         dictName="models"
-        apiDict={window.dictionariesApi?.models}
+        apiDict={api.models}
       />
       <div>
         <Label>VIN-код</Label>
@@ -124,13 +125,13 @@ export const GeneralInfo = ({
         label="Еко-стандарт"
         fieldName="euro_standard"
         dictName="euroStandards"
-        apiDict={window.dictionariesApi?.euroStandards}
+        apiDict={api.euroStandards}
       />
       <SmartSelectField
         label="Група авто"
         fieldName="group_name"
         dictName="groups"
-        apiDict={window.dictionariesApi?.groups}
+        apiDict={api.groups}
       />
     </FormGroup>
   );
