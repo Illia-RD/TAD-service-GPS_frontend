@@ -1,76 +1,676 @@
-frontend/
-├── index.html          # Головний HTML-файл (точка входу Vite)
-├── package.json        # Залежності проекту
-├── vite.config.js      # Налаштування Vite
-└── src/
-    ├── main.jsx        # Точка входу React
-    ├── App.jsx         # Головний компонент (роутинг)
-    │
-    ├── components/     # Перевикористовувані UI-елементи
-    │   ├── ui/         # Кнопки, інпути, модалки
-    │   └── Kanban/     # Специфічні компоненти дошки
-    │       ├── Board.jsx
-    │       └── Column.jsx
-    │
-    ├── features/       # Логічно розділені модулі (доменна логіка)
-    │   ├── tickets/    # Все про задачі
-    │   │   ├── TicketCard.jsx
-    │   │   └── TicketModal.jsx
-    │   └── vehicles/   # Все про автомобілі
-    │       ├── VehicleList.jsx
-    │       └── VehicleCard.jsx
-    │
-    ├── hooks/          # Кастомні React-хуки (напр. useTickets, useTraccarWebsocket)
-    ├── services/       # Запити до API (axios/fetch)
-    │   └── api.js      
-    └── utils/          # Допоміжні функції (форматування дат, підрахунок годин)
-    
-//main.jsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
+//------------VehicleCard.jsx----------------
+import React, { useState } from 'react';
+import { Edit2 } from 'lucide-react';
+import {
+  Card,
+  CardHeader,
+  Title,
+  Badge,
+  DetailsSection,
+  SectionTitle,
+  DetailsGrid,
+  Field,
+} from './VehicleCard.styled';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+export const VehicleCard = ({ vehicle, onEdit }) => {
+  const [expanded, setExpanded] = useState(false);
 
-//app.jsx
-import React from 'react';
-import { VehicleList } from './features/vehicles/VehicleList';
-import { AppContainer, Header, Title } from './App.styled';
-
-export default function App() {
   return (
-    <AppContainer>
-      <Header>
-        <Title>TAD Service GPS</Title>
-      </Header>
-      <VehicleList />
-    </AppContainer>
-  );
-}
+    <Card onClick={() => setExpanded(!expanded)}>
+      <CardHeader>
+        {/* Головний обгортковий контейнер, який змушує блоки йти один під одним */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            gap: '10px',
+          }}
+        >
+          {/* ВЕРХНІЙ РЯДОК: Заголовок + Кнопка */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '12px',
+              width: '100%',
+            }}
+          >
+            <Title
+              style={{
+                margin: 0,
+                flex: '1 1 0%',
+                lineHeight: '1.3',
+                wordBreak: 'break-word',
+              }}
+            >
+              #{vehicle.internal_id} | {vehicle.plate}
+            </Title>
 
-//VehicleList
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                if (onEdit) onEdit(vehicle);
+              }}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                cursor: 'pointer',
+                color: '#64748b',
+                padding: 0,
+              }}
+              title="Редагувати"
+            >
+              <Edit2 size={14} />
+            </button>
+          </div>
+
+          {/* НИЖНІЙ РЯДОК: Бейджі */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <Badge style={{ background: '#dbeafe', color: '#1e40af' }}>
+              {vehicle.group_name}
+            </Badge>
+            <Badge>
+              {vehicle.make} {vehicle.model}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+
+      {expanded && (
+        <DetailsSection>
+          <div>
+            <SectionTitle>Основна інформація</SectionTitle>
+            <DetailsGrid>
+              <Field>
+                VIN: <span>{vehicle.vin || '—'}</span>
+              </Field>
+              <Field>
+                Рік випуску: <span>{vehicle.year || '—'}</span>
+              </Field>
+              <Field>
+                Еко-стандарт: <span>{vehicle.euro_standard || '—'}</span>
+              </Field>
+            </DetailsGrid>
+          </div>
+
+          <div>
+            <SectionTitle>Паливна система</SectionTitle>
+            <DetailsGrid>
+              <Field>
+                Об'єм баку:{' '}
+                <span>
+                  {vehicle.tank_volume ? `${vehicle.tank_volume} л` : '—'}
+                </span>
+              </Field>
+              <Field>
+                Розмір баку: <span>{vehicle.tank_dimensions || '—'}</span>
+              </Field>
+            </DetailsGrid>
+          </div>
+
+          <div>
+            <SectionTitle>Телематика та Обладнання</SectionTitle>
+            <DetailsGrid>
+              <Field>
+                Трекер: <span>{vehicle.tracker_model || '—'}</span>
+              </Field>
+              <Field>
+                S/N: <span>{vehicle.tracker_sn || '—'}</span>
+              </Field>
+              <Field>
+                IMEI: <span>{vehicle.tracker_imei || '—'}</span>
+              </Field>
+              <Field>
+                Оператор: <span>{vehicle.sim_operator || '—'}</span>
+              </Field>
+              <Field>
+                Номер SIM: <span>{vehicle.sim_number || '—'}</span>
+              </Field>
+              <Field>
+                ДВРП:{' '}
+                <span>
+                  {vehicle.drp_type || '—'}{' '}
+                  {vehicle.drp_height ? `(${vehicle.drp_height} мм)` : ''}
+                </span>
+              </Field>
+              <Field>
+                Інше: <span>{vehicle.other_equipment || '—'}</span>
+              </Field>
+            </DetailsGrid>
+          </div>
+        </DetailsSection>
+      )}
+    </Card>
+  );
+};
+
+//--------------VehicleCard.styled.js------------------------------
+
+import styled from 'styled-components';
+
+export const Card = styled.div`
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-left: 5px solid #2563eb;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+export const CardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+export const Title = styled.h3`
+  margin: 0;
+  font-size: 18px;
+  color: #1e293b;
+`;
+
+export const Badge = styled.span`
+  background: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+`;
+
+export const DetailsSection = styled.div`
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Відстань між блоками (Основні, Паливо, Телематика) */
+`;
+
+export const SectionTitle = styled.h4`
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+export const DetailsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 13px;
+`;
+
+export const Field = styled.div`
+  color: #64748b;
+  span {
+    color: #1e293b;
+    font-weight: 600;
+  }
+`;
+
+//-----------------------VehicleForm.jsx----------------------------
+
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import CreatableSelect from 'react-select/creatable';
+import {
+  FormWrapper,
+  Input,
+  Button,
+  FormGroup,
+  Label,
+  SectionTitle,
+} from './VehicleForm.styled';
+import { vehiclesApi } from '../../services/vehiclesApi';
+import { dictionariesApi } from '../../services/dictionariesApi';
+
+export const VehicleForm = ({ onVehicleAdded, initialData, onCancelEdit }) => {
+  const isEditMode = !!initialData;
+
+  const initialFormState = {
+    plate: '',
+    vin: '',
+    make: '',
+    model: '',
+    internal_id: '',
+    year: '',
+    euro_standard: '',
+    group_name: '',
+    tank_volume: '',
+    tank_dimensions: '',
+    tracker_model: '',
+    tracker_sn: '',
+    tracker_imei: '',
+    sim_operator: '',
+    sim_number: '',
+    drp_type: '',
+    drp_height: '',
+    other_equipment: '',
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
+  const [isLoadingDicts, setIsLoadingDicts] = useState(true);
+
+  // Стани для зберігання опцій усіх довідників
+  const [dicts, setDicts] = useState({
+    makes: [],
+    models: [],
+    drpTypes: [],
+    euroStandards: [],
+    trackerModels: [],
+    simOperators: [],
+    groups: [],
+  });
+
+  useEffect(() => {
+    const loadDictionaries = async () => {
+      try {
+        const [makes, models, drpTypes, euro, trackers, sims, groups] =
+          await Promise.all([
+            dictionariesApi.makes.getAll(),
+            dictionariesApi.models.getAll(),
+            dictionariesApi.drpTypes.getAll(),
+            dictionariesApi.euroStandards.getAll(),
+            dictionariesApi.trackerModels.getAll(),
+            dictionariesApi.simOperators.getAll(),
+            dictionariesApi.groups.getAll(),
+          ]);
+
+        const toOptions = arr =>
+          arr.map(i => ({ value: i.name, label: i.name }));
+
+        setDicts({
+          makes: toOptions(makes),
+          models: toOptions(models),
+          drpTypes: toOptions(drpTypes),
+          euroStandards: toOptions(euro),
+          trackerModels: toOptions(trackers),
+          simOperators: toOptions(sims),
+          groups: toOptions(groups),
+        });
+      } catch (error) {
+        console.error('Помилка завантаження довідників:', error);
+      } finally {
+        setIsLoadingDicts(false);
+      }
+    };
+    loadDictionaries();
+  }, []);
+
+  useEffect(() => {
+    if (initialData) {
+      const sanitizedData = Object.keys(initialFormState).reduce((acc, key) => {
+        acc[key] =
+          initialData[key] != null ? initialData[key] : initialFormState[key];
+        return acc;
+      }, {});
+      setFormData(sanitizedData);
+    } else {
+      setFormData(initialFormState);
+    }
+  }, [initialData]);
+
+  const handleChange = e =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  // УНІВЕРСАЛЬНИЙ ОБРОБНИК ДЛЯ ВСІХ РОЗУМНИХ СЕЛЕКТІВ
+  const handleSmartSelect = async (
+    newValue,
+    actionMeta,
+    fieldName,
+    dictName,
+    apiDict
+  ) => {
+    if (actionMeta.action === 'create-option') {
+      try {
+        const created = await apiDict.create(newValue.value);
+        setDicts(prev => ({
+          ...prev,
+          [dictName]: [
+            ...prev[dictName],
+            { value: created.name, label: created.name },
+          ],
+        }));
+        setFormData(prev => ({ ...prev, [fieldName]: created.name }));
+      } catch (err) {
+        alert(`Помилка створення запису в довіднику`);
+      }
+    } else if (newValue) {
+      setFormData(prev => ({ ...prev, [fieldName]: newValue.value }));
+    } else {
+      setFormData(prev => ({ ...prev, [fieldName]: '' }));
+    }
+  };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    try {
+      if (isEditMode) await vehiclesApi.update(initialData.id, formData);
+      else await vehiclesApi.create(formData);
+      onVehicleAdded();
+      if (!isEditMode) setFormData(initialFormState);
+    } catch (err) {
+      alert(`Помилка: ` + err.message);
+    }
+  };
+
+  const selectStyles = {
+    control: base => ({
+      ...base,
+      borderColor: '#cbd5e1',
+      borderRadius: '6px',
+      padding: '2px',
+      boxShadow: 'none',
+      '&:hover': { borderColor: '#94a3b8' },
+    }),
+  };
+
+  // Компонент-обгортка для зменшення дублювання коду в JSX
+  const SmartSelectField = ({ label, fieldName, dictName, apiDict }) => (
+    <div>
+      <Label>{label}</Label>
+      <CreatableSelect
+        isClearable
+        isDisabled={isLoadingDicts}
+        isLoading={isLoadingDicts}
+        options={dicts[dictName]}
+        value={
+          formData[fieldName]
+            ? { value: formData[fieldName], label: formData[fieldName] }
+            : null
+        }
+        onChange={(val, meta) =>
+          handleSmartSelect(val, meta, fieldName, dictName, apiDict)
+        }
+        placeholder="Оберіть або введіть..."
+        formatCreateLabel={val => `Створити "${val}"`}
+        styles={selectStyles}
+      />
+    </div>
+  );
+
+  return (
+    <FormWrapper onSubmit={handleSubmit}>
+      <h3
+        style={{
+          marginTop: 0,
+          paddingBottom: '10px',
+          borderBottom: '2px solid #e2e8f0',
+        }}
+      >
+        {isEditMode ? 'Редагування автомобіля' : 'Новий автомобіль'}
+      </h3>
+
+      <SectionTitle>Загальна інформація</SectionTitle>
+      <FormGroup>
+        <div>
+          <Label>Порядковий номер (ID)</Label>
+          <Input
+            name="internal_id"
+            value={formData.internal_id}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div>
+          <Label>Держномер</Label>
+          <Input
+            name="plate"
+            value={formData.plate}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <SmartSelectField
+          label="Марка"
+          fieldName="make"
+          dictName="makes"
+          apiDict={dictionariesApi.makes}
+        />
+        <SmartSelectField
+          label="Модель"
+          fieldName="model"
+          dictName="models"
+          apiDict={dictionariesApi.models}
+        />
+        <div>
+          <Label>VIN-код</Label>
+          <Input name="vin" value={formData.vin} onChange={handleChange} />
+        </div>
+        <div>
+          <Label>Рік випуску</Label>
+          <Input
+            name="year"
+            type="number"
+            value={formData.year}
+            onChange={handleChange}
+          />
+        </div>
+        <SmartSelectField
+          label="Еко-стандарт"
+          fieldName="euro_standard"
+          dictName="euroStandards"
+          apiDict={dictionariesApi.euroStandards}
+        />
+        <SmartSelectField
+          label="Група авто"
+          fieldName="group_name"
+          dictName="groups"
+          apiDict={dictionariesApi.groups}
+        />
+      </FormGroup>
+
+      <SectionTitle>Паливна система</SectionTitle>
+      <FormGroup>
+        <div>
+          <Label>Об'єм баку (л)</Label>
+          <Input
+            name="tank_volume"
+            type="number"
+            step="0.1"
+            value={formData.tank_volume}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>Розміри баку</Label>
+          <Input
+            name="tank_dimensions"
+            value={formData.tank_dimensions}
+            onChange={handleChange}
+          />
+        </div>
+      </FormGroup>
+
+      <SectionTitle>Обладнання</SectionTitle>
+      <FormGroup>
+        <SmartSelectField
+          label="Модель трекера"
+          fieldName="tracker_model"
+          dictName="trackerModels"
+          apiDict={dictionariesApi.trackerModels}
+        />
+        <div>
+          <Label>Серійний номер</Label>
+          <Input
+            name="tracker_sn"
+            value={formData.tracker_sn}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>IMEI</Label>
+          <Input
+            name="tracker_imei"
+            value={formData.tracker_imei}
+            onChange={handleChange}
+          />
+        </div>
+        <SmartSelectField
+          label="Оператор SIM"
+          fieldName="sim_operator"
+          dictName="simOperators"
+          apiDict={dictionariesApi.simOperators}
+        />
+        <div>
+          <Label>Номер SIM</Label>
+          <Input
+            name="sim_number"
+            value={formData.sim_number}
+            onChange={handleChange}
+          />
+        </div>
+        <SmartSelectField
+          label="Тип ДВРП"
+          fieldName="drp_type"
+          dictName="drpTypes"
+          apiDict={dictionariesApi.drpTypes}
+        />
+        <div>
+          <Label>Висота ДВРП</Label>
+          <Input
+            name="drp_height"
+            type="number"
+            step="0.1"
+            value={formData.drp_height}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label>Інше обладнання</Label>
+          <Input
+            name="other_equipment"
+            value={formData.other_equipment}
+            onChange={handleChange}
+          />
+        </div>
+      </FormGroup>
+
+      <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+        <Button type="submit" style={{ flex: 1 }}>
+          {isEditMode ? 'Зберегти зміни' : 'Додати авто'}
+        </Button>
+        {isEditMode && (
+          <Button
+            type="button"
+            onClick={onCancelEdit}
+            style={{ flex: 1, background: '#94a3b8' }}
+          >
+            Скасувати
+          </Button>
+        )}
+      </div>
+    </FormWrapper>
+  );
+};
+
+//------------------VehicleForm.styled.js-----------------
+import styled from 'styled-components';
+
+export const FormWrapper = styled.form`
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+`;
+
+export const SectionTitle = styled.h3`
+  font-size: 16px;
+  color: #1e293b;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+  margin-top: 24px;
+`;
+
+export const FormGroup = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+`;
+
+export const Label = styled.label`
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 600;
+`;
+
+export const Input = styled.input`
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+`;
+
+export const Select = styled.select`
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  width: 100%;
+  background: white;
+`;
+
+export const Button = styled.button`
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+  &:hover {
+    background: #1d4ed8;
+  }
+`;
+
+//----------------------VehicleList.jsx---------------------------------
+import React, { useState, useEffect } from 'react';
 import { Plus, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { VehicleCard } from './VehicleCard';
 import { VehicleForm } from './VehicleForm';
 import { VehicleModal } from './VehicleModal';
-import { VehicleTable } from './VehicleTable'; // Переконайся, що цей файл існує
+import { VehicleTable } from './VehicleTable';
 import { ListWrapper } from './VehicleList.styled';
+import { vehiclesApi } from '../../services/vehiclesApi';
 
 export const VehicleList = () => {
   const [vehicles, setVehicles] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('card'); // 'card' або 'table'
+
+  // ДОДАНО: Стан для збереження авто, яке ми зараз редагуємо
+  const [editingVehicle, setEditingVehicle] = useState(null);
+
+  const [viewMode, setViewMode] = useState(() => {
+    return window.innerWidth >= 1024 ? 'table' : 'card';
+  });
 
   const loadVehicles = () => {
-    axios
-      .get('http://127.0.0.1:8000/api/vehicles/')
-      .then(res => setVehicles(res.data))
+    vehiclesApi
+      .getAll()
+      .then(data => setVehicles(data))
       .catch(err => console.error('Помилка при завантаженні авто:', err));
   };
 
@@ -78,11 +678,26 @@ export const VehicleList = () => {
     loadVehicles();
   }, []);
 
+  // ДОДАНО: Функція для відкриття модалки в режимі редагування
+  const handleEdit = vehicle => {
+    setEditingVehicle(vehicle);
+    setIsModalOpen(true);
+  };
+
+  // ДОДАНО: Функція для закриття модалки і очищення стану редагування
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingVehicle(null);
+  };
+
   return (
     <>
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingVehicle(null); // Якщо натиснули "Створити", скидаємо редагування
+            setIsModalOpen(true);
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -100,23 +715,37 @@ export const VehicleList = () => {
 
         <button
           onClick={() => setViewMode('card')}
-          style={{ padding: '10px', cursor: 'pointer' }}
+          style={{
+            padding: '10px',
+            cursor: 'pointer',
+            background: viewMode === 'card' ? '#e2e8f0' : 'transparent',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+          }}
         >
           <LayoutGrid size={20} />
         </button>
         <button
           onClick={() => setViewMode('table')}
-          style={{ padding: '10px', cursor: 'pointer' }}
+          style={{
+            padding: '10px',
+            cursor: 'pointer',
+            background: viewMode === 'table' ? '#e2e8f0' : 'transparent',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+          }}
         >
           <ListIcon size={20} />
         </button>
       </div>
 
-      <VehicleModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+      <VehicleModal isOpen={isModalOpen} onClose={handleCloseModal}>
         <VehicleForm
+          initialData={editingVehicle} // ДОДАНО: передаємо дані у форму
+          onCancelEdit={handleCloseModal} // ДОДАНО: кнопка скасування
           onVehicleAdded={() => {
             loadVehicles();
-            setIsModalOpen(false);
+            handleCloseModal();
           }}
         />
       </VehicleModal>
@@ -124,220 +753,34 @@ export const VehicleList = () => {
       {viewMode === 'card' ? (
         <ListWrapper>
           {vehicles.map(v => (
-            <VehicleCard key={v.id} vehicle={v} />
+            <VehicleCard
+              key={v.id}
+              vehicle={v}
+              onEdit={handleEdit} // ДОДАНО: прокидаємо функцію в картку
+            />
           ))}
         </ListWrapper>
       ) : (
-        <VehicleTable vehicles={vehicles} />
+        <VehicleTable
+          vehicles={vehicles}
+          onEdit={handleEdit} // ДОДАНО: прокидаємо функцію в таблицю
+        />
       )}
     </>
   );
 };
 
+//----------------------VehicleList.styled.js----------------------------
+import styled from 'styled-components';
 
-//vehicleForm
-import React, { useState } from 'react';
-import axios from 'axios';
-import {
-  FormWrapper,
-  Input,
-  Button,
-  Select,
-  FormGroup,
-  Label,
-  SectionTitle,
-} from './VehicleForm.styled';
+export const ListWrapper = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+`;
 
-export const VehicleForm = ({ onVehicleAdded }) => {
-  const [formData, setFormData] = useState({
-    plate: '',
-    vin: '',
-    make: '',
-    model: '',
-    internal_id: '',
-    tank_volume: '',
-    tank_dimensions: '',
-    tracker_model: '',
-    tracker_sn: '',
-    tracker_imei: '',
-    sim_operator: 'Київстар',
-    sim_number: '',
-    drp_type: '',
-    drp_height: '',
-    other_equipment: '',
-  });
-
-  const handleChange = e =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const handleSubmit = async e => {
-    e.preventDefault();
-    try {
-      // Відправляємо дані як float/string відповідно до структури
-      await axios.post('http://127.0.0.1:8000/api/vehicles/', {
-        ...formData,
-        tank_volume: parseFloat(formData.tank_volume) || 0,
-        drp_height: parseFloat(formData.drp_height) || 0,
-      });
-      onVehicleAdded();
-      // Очищення форми
-      setFormData({
-        plate: '',
-        vin: '',
-        make: '',
-        model: '',
-        internal_id: '',
-        tank_volume: '',
-        tank_dimensions: '',
-        tracker_model: '',
-        tracker_sn: '',
-        tracker_imei: '',
-        sim_operator: 'Київстар',
-        sim_number: '',
-        drp_type: '',
-        drp_height: '',
-        other_equipment: '',
-      });
-    } catch (err) {
-      alert('Помилка: ' + err.message);
-    }
-  };
-
-  return (
-    <FormWrapper onSubmit={handleSubmit}>
-      <SectionTitle>Загальна інформація</SectionTitle>
-      <FormGroup>
-        <div>
-          <Label>Держномер</Label>
-          <Input
-            name="plate"
-            value={formData.plate}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div>
-          <Label>VIN</Label>
-          <Input name="vin" value={formData.vin} onChange={handleChange} />
-        </div>
-        <div>
-          <Label>Марка</Label>
-          <Input name="make" value={formData.make} onChange={handleChange} />
-        </div>
-        <div>
-          <Label>Модель</Label>
-          <Input name="model" value={formData.model} onChange={handleChange} />
-        </div>
-        <div>
-          <Label>Внутрішній ID</Label>
-          <Input
-            name="internal_id"
-            value={formData.internal_id}
-            onChange={handleChange}
-          />
-        </div>
-      </FormGroup>
-
-      <SectionTitle>Паливна система</SectionTitle>
-      <FormGroup>
-        <div>
-          <Label>Об'єм баку (л)</Label>
-          <Input
-            name="tank_volume"
-            type="number"
-            value={formData.tank_volume}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label>Розміри баку</Label>
-          <Input
-            name="tank_dimensions"
-            value={formData.tank_dimensions}
-            onChange={handleChange}
-          />
-        </div>
-      </FormGroup>
-
-      <SectionTitle>Обладнання</SectionTitle>
-      <FormGroup>
-        <div>
-          <Label>Модель трекера</Label>
-          <Input
-            name="tracker_model"
-            value={formData.tracker_model}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label>Серійний номер</Label>
-          <Input
-            name="tracker_sn"
-            value={formData.tracker_sn}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label>IMEI</Label>
-          <Input
-            name="tracker_imei"
-            value={formData.tracker_imei}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label>Оператор SIM</Label>
-          <Select
-            name="sim_operator"
-            value={formData.sim_operator}
-            onChange={handleChange}
-          >
-            <option value="Київстар">Київстар</option>
-            <option value="Vodafone">Vodafone</option>
-            <option value="Lifecell">Lifecell</option>
-          </Select>
-        </div>
-        <div>
-          <Label>Номер SIM</Label>
-          <Input
-            name="sim_number"
-            value={formData.sim_number}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label>Тип ДВРП</Label>
-          <Input
-            name="drp_type"
-            value={formData.drp_type}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label>Висота ДВРП</Label>
-          <Input
-            name="drp_height"
-            type="number"
-            value={formData.drp_height}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label>Інше</Label>
-          <Input
-            name="other_equipment"
-            value={formData.other_equipment}
-            onChange={handleChange}
-          />
-        </div>
-      </FormGroup>
-
-      <Button type="submit">Зберегти авто</Button>
-    </FormWrapper>
-  );
-};
-
-//VehicleModal
+//--------------------VehicleModal.jsx-----------------
 import React from 'react';
 import { Overlay, ModalContent, CloseButton } from './VehicleModal.styled';
 
@@ -353,8 +796,46 @@ export const VehicleModal = ({ isOpen, onClose, children }) => {
   );
 };
 
-//VehicleTable
+//-------------------VehicleModal.styled.js------------------
+import styled from 'styled-components';
+
+export const Overlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+export const ModalContent = styled.div`
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+`;
+
+export const CloseButton = styled.button`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+`;
+
+//--------------------------VehicleTable.jsx----------------
 import React from 'react';
+import { Edit2 } from 'lucide-react'; // Додали Edit2
 import {
   TableContainer,
   Table,
@@ -365,34 +846,87 @@ import {
   StickyTd,
 } from './VehicleTable.styled';
 
-export const VehicleTable = ({ vehicles }) => (
+// Додали пропс onEdit
+export const VehicleTable = ({ vehicles, onEdit }) => (
   <TableContainer>
     <Table>
       <thead>
         <tr>
-          {/* Фіксуємо перші два стовпці */}
-          <StickyTh style={{ left: 0, width: '100px' }}>ID</StickyTh>
-          <StickyTh style={{ left: '100px', borderRight: '1px solid #e2e8f0' }}>
+          {/* Фіксуємо ширину і відступи зліва */}
+          <StickyTh
+            style={{
+              left: 0,
+              width: '80px',
+              minWidth: '80px',
+              maxWidth: '80px',
+            }}
+          >
+            ID
+          </StickyTh>
+          <StickyTh
+            style={{
+              left: '80px',
+              width: '120px',
+              minWidth: '120px',
+              maxWidth: '120px',
+              borderRight: '2px solid #cbd5e1',
+            }}
+          >
             Номер
           </StickyTh>
 
           <Th>Марка/Модель</Th>
+          <Th>Група</Th>
           <Th>Рік</Th>
           <Th>Євро</Th>
-          <Th>Оператор</Th>
-          <Th>Трекер</Th>
+          <Th>VIN</Th>
+          <Th>Об'єм баку</Th>
+          <Th>Розміри баку</Th>
+          <Th>Трекер (Модель/SN/IMEI)</Th>
+          <Th>SIM Оператор</Th>
+          <Th>Номер SIM</Th>
+          <Th>ДВРП (Тип/Висота)</Th>
+          <Th>Інше обладнання</Th>
+
+          {/* НОВА ЗАКРІПЛЕНА КОЛОНКА СПРАВА */}
+          <StickyTh
+            style={{
+              right: 0,
+              width: '60px',
+              minWidth: '60px',
+              maxWidth: '60px',
+              borderLeft: '2px solid #cbd5e1',
+              textAlign: 'center',
+              background: '#f8fafc',
+            }}
+          >
+            Дії
+          </StickyTh>
         </tr>
       </thead>
       <tbody>
         {vehicles.map(v => (
           <Tr key={v.id}>
-            {/* sticky комірки повинні мати той самий left, що і заголовки */}
-            <StickyTd style={{ left: 0 }}>{v.internal_id}</StickyTd>
             <StickyTd
               style={{
-                left: '100px',
-                borderRight: '1px solid #e2e8f0',
+                left: 0,
+                width: '80px',
+                minWidth: '80px',
+                maxWidth: '80px',
+                background: 'white', // Обов'язково фон, щоб не просвічувалось
+              }}
+            >
+              {v.internal_id}
+            </StickyTd>
+            <StickyTd
+              style={{
+                left: '80px',
+                width: '120px',
+                minWidth: '120px',
+                maxWidth: '120px',
+                borderRight: '2px solid #cbd5e1',
                 fontWeight: 'bold',
+                background: 'white', // Обов'язково фон
               }}
             >
               {v.plate}
@@ -401,10 +935,55 @@ export const VehicleTable = ({ vehicles }) => (
             <Td>
               {v.make} {v.model}
             </Td>
-            <Td>{v.year || '-'}</Td>
-            <Td>{v.euro_standard || '-'}</Td>
+            <Td>{v.group_name}</Td>
+            <Td>{v.year}</Td>
+            <Td>{v.euro_standard}</Td>
+            <Td style={{ fontFamily: 'monospace' }}>{v.vin}</Td>
+            <Td>{v.tank_volume} л</Td>
+            <Td>{v.tank_dimensions}</Td>
+            <Td>
+              {v.tracker_model}
+              <br />
+              <small style={{ color: '#64748b' }}>
+                SN: {v.tracker_sn} | IMEI: {v.tracker_imei}
+              </small>
+            </Td>
             <Td>{v.sim_operator}</Td>
-            <Td>{v.tracker_model}</Td>
+            <Td>{v.sim_number}</Td>
+            <Td>
+              {v.drp_type} {v.drp_height ? `(${v.drp_height} мм)` : ''}
+            </Td>
+            <Td>{v.other_equipment}</Td>
+
+            {/* НОВА ЗАКРІПЛЕНА КОЛОНКА СПРАВА ДЛЯ ОЛІВЦЯ */}
+            <StickyTd
+              style={{
+                right: 0,
+                width: '60px',
+                minWidth: '60px',
+                maxWidth: '60px',
+                borderLeft: '2px solid #cbd5e1',
+                textAlign: 'center',
+                background: 'white', // Обов'язково фон
+              }}
+            >
+              <button
+                onClick={() => onEdit(v)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '6px',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  display: 'flex',
+                  margin: '0 auto', // Центруємо
+                }}
+                title="Редагувати"
+              >
+                <Edit2 size={14} />
+              </button>
+            </StickyTd>
           </Tr>
         ))}
       </tbody>
@@ -412,68 +991,56 @@ export const VehicleTable = ({ vehicles }) => (
   </TableContainer>
 );
 
-//VehicleCard
-import React, { useState } from 'react';
-import {
-  Card,
-  CardHeader,
-  Title,
-  Badge,
-  DetailsSection,
-  Field,
-} from './VehicleCard.styled';
+//--------------------------VehicleTable.styled.js------------------
+import styled from 'styled-components';
 
-export const VehicleCard = ({ vehicle }) => {
-  const [expanded, setExpanded] = useState(false);
+export const TableContainer = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
 
-  return (
-    <Card onClick={() => setExpanded(!expanded)}>
-      <CardHeader>
-        <Title>
-          #{vehicle.internal_id} | {vehicle.plate}
-        </Title>
-        <Badge>
-          {vehicle.make} {vehicle.model}
-        </Badge>
-      </CardHeader>
+export const Table = styled.table`
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1200px; /* Зробив ширше, щоб було куди скролити */
+`;
 
-      {expanded && (
-        <DetailsSection>
-          <Field>
-            VIN: <span>{vehicle.vin}</span>
-          </Field>
-          <Field>
-            Об'єм баку: <span>{vehicle.tank_volume} л</span>
-          </Field>
-          <Field>
-            Розмір баку: <span>{vehicle.tank_dimensions}</span>
-          </Field>
-          <Field>
-            Модель трекера: <span>{vehicle.tracker_model}</span>
-          </Field>
-          <Field>
-            Серійний номер: <span>{vehicle.tracker_sn}</span>
-          </Field>
-          <Field>
-            IMEI: <span>{vehicle.tracker_imei}</span>
-          </Field>
-          <Field>
-            Оператор SIM: <span>{vehicle.sim_operator}</span>
-          </Field>
-          <Field>
-            Номер SIM: <span>{vehicle.sim_number}</span>
-          </Field>
-          <Field>
-            Тип ДВРП: <span>{vehicle.drp_type}</span>
-          </Field>
-          <Field>
-            Висота ДВРП: <span>{vehicle.drp_height}</span>
-          </Field>
-          <Field>
-            Інше: <span>{vehicle.other_equipment}</span>
-          </Field>
-        </DetailsSection>
-      )}
-    </Card>
-  );
-};
+export const Th = styled.th`
+  background: #f8fafc;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+`;
+
+export const StickyTh = styled(Th)`
+  position: sticky;
+  z-index: 10; /* Підняв z-index */
+  background: #f8fafc;
+`;
+
+export const Td = styled.td`
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+`;
+
+export const StickyTd = styled(Td)`
+  position: sticky;
+  z-index: 5;
+  background: white; /* Це лікує налізання тексту! */
+`;
+
+export const Tr = styled.tr`
+  &:hover td {
+    background: #f1f5f9;
+  }
+  /* Щоб при наведенні липкі комірки теж підсвічувалися */
+  &:hover ${StickyTd} {
+    background: #f1f5f9;
+  }
+`;
