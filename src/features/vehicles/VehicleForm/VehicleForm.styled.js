@@ -1,54 +1,59 @@
 import styled from 'styled-components';
 
-export const FormWrapper = styled.form`
-  background: white;
-  /* Видалили зайві падінги та бордери, бо вони є в модалці */
+export const FormWrapper = styled.div`
+  max-width: 900px; /* Обмежимо ширину форми для зручного читання */
+  margin: 0 auto;
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 `;
 
-export const FormHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+export const FormTitle = styled.h2`
+  margin-top: 0;
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e2e8f0;
-`;
-
-export const FormTitle = styled.h3`
-  margin: 0;
-  font-size: 20px;
+  font-size: 24px;
   color: #1e293b;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 12px;
 `;
 
-export const SectionTitle = styled.h4`
-  font-size: 16px;
-  color: #1e293b;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e2e8f0;
-  margin-top: 32px;
-`;
-
-export const ButtonGroup = styled.div`
+export const FormActions = styled.div`
   display: flex;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 16px;
   margin-top: 32px;
   padding-top: 24px;
   border-top: 1px solid #e2e8f0;
 `;
 
 export const Button = styled.button`
-  flex: 1;
-  padding: 12px 24px;
-  background: ${props => (props.$secondary ? '#94a3b8' : '#2563eb')};
-  color: white;
-  border: none;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 600;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  background-color: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
 
   &:hover {
-    background: ${props => (props.$secondary ? '#64748b' : '#1d4ed8')};
+    background-color: #f8fafc;
+    color: #1e293b;
+  }
+`;
+
+export const SaveButton = styled(Button)`
+  background-color: #3b82f6;
+  color: #ffffff;
+  border-color: #3b82f6;
+
+  &:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
   }
 `;

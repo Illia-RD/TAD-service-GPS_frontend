@@ -11,12 +11,13 @@ import {
   ViewModeButton,
 } from './VehicleList.styled';
 import { vehiclesApi } from '../../../services/vehiclesApi';
+
 export const VehicleList = () => {
   const [vehicles, setVehicles] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
 
-  // Новий стан для відстеження, чи ввів користувач якісь дані у форму
+  // Стан для відстеження, чи ввів користувач якісь дані у форму
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const [viewMode, setViewMode] = useState(() => {
@@ -53,6 +54,28 @@ export const VehicleList = () => {
     setIsFormDirty(false);
   };
 
+  // НОВА ФУНКЦІЯ: Збереження форми на бекенд
+  const handleSaveVehicle = async formData => {
+    try {
+      if (editingVehicle?.id) {
+        // Якщо є ID, значить це редагування
+        await vehiclesApi.update(editingVehicle.id, formData);
+      } else {
+        // Якщо ID немає, створюємо нову машину
+        await vehiclesApi.create(formData);
+      }
+
+      // Якщо все пройшло успішно: оновлюємо список і закриваємо форму
+      loadVehicles();
+      setIsFormDirty(false);
+      setIsModalOpen(false);
+      setEditingVehicle(null);
+    } catch (error) {
+      console.error('Помилка при збереженні авто:', error);
+      alert('Виникла помилка при збереженні. Перевірте консоль.');
+    }
+  };
+
   return (
     <>
       <ControlsContainer>
@@ -83,15 +106,10 @@ export const VehicleList = () => {
       <VehicleModal isOpen={isModalOpen} onClose={handleCloseModal}>
         <VehicleForm
           initialData={editingVehicle}
-          onCancelEdit={handleCloseModal}
-          onVehicleAdded={() => {
-            loadVehicles();
-            // Якщо авто успішно додано/оновлено, скидаємо стан "брудної" форми
-            setIsFormDirty(false);
-            setIsModalOpen(false);
-            setEditingVehicle(null);
-          }}
-          // Передаємо функцію, щоб форма могла повідомляти списку, що дані змінилися
+          onSubmit={handleSaveVehicle} /* Передаємо нашу нову функцію */
+          onCancelEdit={
+            handleCloseModal
+          } /* Використовуємо onCancelEdit, як домовлялися */
           onFormDirty={status => setIsFormDirty(status)}
         />
       </VehicleModal>

@@ -1,85 +1,75 @@
 import React, { useState, useEffect } from 'react';
+import { GeneralInfo } from './GeneralInfo/GeneralInfo';
+import { TanksSection } from './TanksSection/TanksSection';
+import { TrackersSection } from './TrackersSection/TrackersSection';
+import { LLSSection } from './LLSSection/LLSSection';
 import {
   FormWrapper,
-  FormHeader,
   FormTitle,
-  SectionTitle,
-  ButtonGroup,
+  FormActions,
   Button,
+  SaveButton,
 } from './VehicleForm.styled';
-import { vehiclesApi } from '../../../services/vehiclesApi';
-import { dictionariesApi } from '../../../services/dictionariesApi';
-import { GeneralInfo } from './GeneralInfo/GeneralInfo';
 
-export const VehicleForm = ({
-  onVehicleAdded,
-  initialData,
-  onCancelEdit,
-  onFormDirty,
-}) => {
-  const isEditMode = !!initialData;
+import { dictionariesApi as api } from '../../../services/dictionariesApi';
 
-  // Тимчасово залишаємо старі поля в initialFormState,
-  // щоб поки ми пишемо нові компоненти, додаток не падав.
-  const initialFormState = {
+// ЗМІНЕНО: Приймаємо onCancelEdit замість onCancel, щоб відповідало твоєму VehicleList
+export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
+  const [formData, setFormData] = useState({
+    internal_id: '',
     plate: '',
-    vin: '',
     make: '',
     model: '',
-    internal_id: '',
+    vin: '',
     year: '',
     euro_standard: '',
     group_name: '',
-    tank_volume: '',
-    tank_dimensions: '',
-    tracker_model: '',
-    tracker_sn: '',
-    tracker_imei: '',
-    sim_operator: '',
-    sim_number: '',
-    drp_type: '',
-    drp_height: '',
-    other_equipment: '',
-  };
-
-  const [formData, setFormData] = useState(initialFormState);
-  const [isLoadingDicts, setIsLoadingDicts] = useState(true);
-
-  const [dicts, setDicts] = useState({
-    makes: [],
-    models: [],
-    drpTypes: [],
-    euroStandards: [],
-    trackerModels: [],
-    simOperators: [],
-    groups: [],
+    trackers_data: [], // замість trackers
+    tanks_data: [], // замість tanks
+    drps_data: [], // замість lls
+    additional_equipment: [],
   });
 
+  // ЗМІНЕНО: Додали стейти для довідників з GeneralInfo
+  const [dicts, setDicts] = useState({
+    trackerModels: [],
+    simOperators: [],
+    drpTypes: [],
+    makes: [],
+    models: [],
+    euroStandards: [],
+    groups: [],
+  });
+  const [isLoadingDicts, setIsLoadingDicts] = useState(true);
+
   useEffect(() => {
-    const loadDictionaries = async () => {
+    setFormData(initialData || { tanks: [], lls: [], trackers: [] });
+  }, [initialData]);
+
+  useEffect(() => {
+    const fetchDictionaries = async () => {
+      setIsLoadingDicts(true);
       try {
-        const [makes, models, drpTypes, euro, trackers, sims, groups] =
+        // ЗМІНЕНО: Тепер ми вантажимо ВСІ довідники, а не тільки трекери
+        const [trackers, sims, drps, makes, models, euros, groups] =
           await Promise.all([
-            dictionariesApi.makes.getAll(),
-            dictionariesApi.models.getAll(),
-            dictionariesApi.drpTypes.getAll(),
-            dictionariesApi.euroStandards.getAll(),
-            dictionariesApi.trackerModels.getAll(),
-            dictionariesApi.simOperators.getAll(),
-            dictionariesApi.groups.getAll(),
+            api.trackerModels.getAll(),
+            api.simOperators.getAll(),
+            api.drpTypes.getAll(),
+            api.makes.getAll(),
+            api.models.getAll(),
+            api.euroStandards.getAll(),
+            api.groups.getAll(),
           ]);
 
-        const toOptions = arr =>
-          arr.map(i => ({ value: i.name, label: i.name }));
-
         setDicts({
-          makes: toOptions(makes),
-          models: toOptions(models),
-          drpTypes: toOptions(drpTypes),
-          euroStandards: toOptions(euro),
-          trackerModels: toOptions(trackers),
-          simOperators: toOptions(sims),
-          groups: toOptions(groups),
+          trackerModels: trackers.map(t => ({ value: t.name, label: t.name })),
+          simOperators: sims.map(s => ({ value: s.name, label: s.name })),
+          drpTypes: drps.map(d => ({ value: d.name, label: d.name })),
+          makes: makes.map(m => ({ value: m.name, label: m.name })),
+          models: models.map(m => ({ value: m.name, label: m.name })),
+          euroStandards: euros.map(e => ({ value: e.name, label: e.name })),
+          groups: groups.map(g => ({ value: g.name, label: g.name })),
         });
       } catch (error) {
         console.error('Помилка завантаження довідників:', error);
@@ -87,88 +77,59 @@ export const VehicleForm = ({
         setIsLoadingDicts(false);
       }
     };
-    loadDictionaries();
+
+    fetchDictionaries();
   }, []);
 
-  useEffect(() => {
-    if (initialData) {
-      const sanitizedData = Object.keys(initialFormState).reduce((acc, key) => {
-        acc[key] =
-          initialData[key] != null ? initialData[key] : initialFormState[key];
-        return acc;
-      }, {});
-      setFormData(sanitizedData);
-    } else {
-      setFormData(initialFormState);
-    }
-  }, [initialData]);
-
-  // Слідкуємо за змінами у формі, щоб повідомляти модалку
-  useEffect(() => {
-    if (onFormDirty) {
-      const baseData = initialData
-        ? Object.keys(initialFormState).reduce((acc, key) => {
-            acc[key] =
-              initialData[key] != null
-                ? initialData[key]
-                : initialFormState[key];
-            return acc;
-          }, {})
-        : initialFormState;
-
-      const isDirty = JSON.stringify(formData) !== JSON.stringify(baseData);
-      onFormDirty(isDirty);
-    }
-  }, [formData, initialData, onFormDirty]);
-
-  const handleSubmit = async e => {
+  const handleSubmit = e => {
     e.preventDefault();
-    try {
-      if (isEditMode) await vehiclesApi.update(initialData.id, formData);
-      else await vehiclesApi.create(formData);
-      onVehicleAdded();
-    } catch (err) {
-      alert(`Помилка: ` + err.message);
+    onSubmit(formData);
+  };
+
+  const handleCancel = () => {
+    const defaultData = { tanks: [], lls: [], trackers: [] };
+    const hasChanges =
+      JSON.stringify(formData) !== JSON.stringify(initialData || defaultData);
+
+    if (hasChanges) {
+      const confirmDiscard = window.confirm(
+        'Є незбережені дані. Бажаєте вийти БЕЗ збереження? (ОК - вийти, Скасування - залишитись)'
+      );
+      if (confirmDiscard) {
+        if (typeof onCancelEdit === 'function') onCancelEdit();
+      }
+    } else {
+      if (typeof onCancelEdit === 'function') onCancelEdit();
     }
   };
 
+  const sectionProps = {
+    formData,
+    setFormData,
+    dicts,
+    setDicts,
+    isLoadingDicts,
+  };
+
   return (
-    <FormWrapper onSubmit={handleSubmit}>
-      <FormHeader>
-        <FormTitle>
-          {isEditMode ? 'Редагування автомобіля' : 'Новий автомобіль'}
-        </FormTitle>
-      </FormHeader>
+    <FormWrapper>
+      <FormTitle>
+        {initialData?.id ? 'Редагування автомобіля' : 'Додавання автомобіля'}
+      </FormTitle>
 
-      <SectionTitle>Загальна інформація</SectionTitle>
+      <form onSubmit={handleSubmit}>
+        <GeneralInfo {...sectionProps} />
+        <TanksSection formData={formData} setFormData={setFormData} />
+        <TrackersSection {...sectionProps} />
+        <LLSSection {...sectionProps} />
 
-      {/* Наш перший ізольований компонент */}
-      <GeneralInfo
-        formData={formData}
-        setFormData={setFormData}
-        dicts={dicts}
-        setDicts={setDicts}
-        isLoadingDicts={isLoadingDicts}
-        api={{ dictionariesApi }}
-      />
-
-      {/* Тимчасова заглушка для старої частини форми */}
-      <div style={{ opacity: 0.5, pointerEvents: 'none' }}>
-        <SectionTitle>
-          Паливна система та Обладнання (Зараз переписуємо...)
-        </SectionTitle>
-      </div>
-
-      <ButtonGroup>
-        <Button type="submit">
-          {isEditMode ? 'Зберегти зміни' : 'Додати авто'}
-        </Button>
-        {isEditMode && (
-          <Button type="button" $secondary onClick={onCancelEdit}>
+        <FormActions>
+          <Button type="button" onClick={handleCancel}>
             Скасувати
           </Button>
-        )}
-      </ButtonGroup>
+          <SaveButton type="submit">Зберегти</SaveButton>
+        </FormActions>
+      </form>
     </FormWrapper>
   );
 };

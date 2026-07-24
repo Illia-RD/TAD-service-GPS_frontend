@@ -16,16 +16,40 @@ export const Label = styled.label`
 `;
 
 export const Input = styled.input`
-  padding: 10px;
+  box-sizing: border-box; /* <--- Додаємо це */
+  width: 100%;
+  padding: 8px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+  background-color: #ffffff;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 
   &:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 1px #2563eb;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px #3b82f6;
+  }
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+`;
+export const Select = styled.select`
+  box-sizing: border-box; /* <--- Додаємо це */
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+  background-color: #ffffff;
+
+  &:focus {
+    border-color: #3b82f6;
   }
 `;

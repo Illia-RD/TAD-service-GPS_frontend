@@ -1,6 +1,6 @@
 import React from 'react';
 import CreatableSelect from 'react-select/creatable';
-import { FormGroup, Label, Input } from './GeneralInfo.styled';
+import { FormGroup, Label, Input, Select } from './GeneralInfo.styled';
 import { dictionariesApi as api } from '../../../../services/dictionariesApi';
 
 export const GeneralInfo = ({
@@ -27,7 +27,7 @@ export const GeneralInfo = ({
         setDicts(prev => ({
           ...prev,
           [dictName]: [
-            ...prev[dictName],
+            ...(prev[dictName] || []), // <--- ТУТ: додали || []
             { value: created.name, label: created.name },
           ],
         }));
@@ -60,7 +60,7 @@ export const GeneralInfo = ({
         isClearable
         isDisabled={isLoadingDicts}
         isLoading={isLoadingDicts}
-        options={dicts[dictName]}
+        options={dicts[dictName] || []} // <--- ТУТ: додали || []
         value={
           formData[fieldName]
             ? { value: formData[fieldName], label: formData[fieldName] }
@@ -78,11 +78,26 @@ export const GeneralInfo = ({
 
   return (
     <FormGroup>
+      {/* Додано поле статусу */}
+      <div>
+        <Label>Статус автомобіля</Label>
+        <Select
+          name="status"
+          value={formData.status || 'connected'}
+          onChange={handleChange}
+        >
+          <option value="connected">🟢 Підключено до трекінгу</option>
+          <option value="disconnected">🔴 Відключено</option>
+          <option value="repair">🟡 В ремонті</option>
+          <option value="sold">⚪ Продаж</option>
+        </Select>
+      </div>
+
       <div>
         <Label>Порядковий номер (ID)</Label>
         <Input
           name="internal_id"
-          value={formData.internal_id}
+          value={formData.internal_id || ''}
           onChange={handleChange}
           required
         />
@@ -91,7 +106,7 @@ export const GeneralInfo = ({
         <Label>Держномер</Label>
         <Input
           name="plate"
-          value={formData.plate}
+          value={formData.plate || ''}
           onChange={handleChange}
           required
         />
@@ -110,14 +125,14 @@ export const GeneralInfo = ({
       />
       <div>
         <Label>VIN-код</Label>
-        <Input name="vin" value={formData.vin} onChange={handleChange} />
+        <Input name="vin" value={formData.vin || ''} onChange={handleChange} />
       </div>
       <div>
         <Label>Рік випуску</Label>
         <Input
           name="year"
           type="number"
-          value={formData.year}
+          value={formData.year || ''}
           onChange={handleChange}
         />
       </div>
