@@ -12,28 +12,19 @@ const mapVehicleData = dbData => ({
   year: dbData.year || null,
   euro_standard: dbData.euro_standard || '—',
   group_name: dbData.group_name || 'Без групи',
+  status: dbData.status || 'connected', // <--- Додали статус
+  other_equipment: dbData.other_equipment || '', // <--- Додали інше обладнання (рядок)
 
   tanks_data: dbData.tanks_data || [],
   trackers_data: dbData.trackers_data || [],
   drps_data: dbData.drps_data || [],
-
-  tank_volume: dbData.tank_volume || 0,
-  tank_dimensions: dbData.tank_dimensions || '—',
-  tracker_model: dbData.tracker_model || '—',
-  tracker_sn: dbData.tracker_sn || '—',
-  tracker_imei: dbData.tracker_imei || '—',
-  sim_operator: dbData.sim_operator || '—',
-  sim_number: dbData.sim_number || '—',
-  drp_type: dbData.drp_type || '—',
-  drp_height: dbData.drp_height || 0,
-  other_equipment: dbData.other_equipment || '—',
 });
 
 const preparePayload = formData => ({
   ...formData,
   year: formData.year ? parseInt(formData.year) : null,
-  tank_volume: formData.tank_volume ? parseFloat(formData.tank_volume) : 0,
-  drp_height: formData.drp_height ? parseFloat(formData.drp_height) : 0,
+  status: formData.status || 'connected', // <--- Статус летить на бек
+  other_equipment: formData.other_equipment || '', // <--- Рядок летить на бек
 
   tanks_data: (formData.tanks_data || []).map(tank => ({
     id: tank.id !== undefined && tank.id !== null ? String(tank.id) : '',
@@ -45,22 +36,23 @@ const preparePayload = formData => ({
   })),
 
   trackers_data: (formData.trackers_data || []).map(tracker => ({
+    id:
+      tracker.id !== undefined && tracker.id !== null ? String(tracker.id) : '',
     tracker_model: tracker.tracker_model || '',
-    tracker_imei: tracker.tracker_imei || '',
+    tracker_imei: tracker.tracker_imei || '', // <--- IMEI
+    tracker_serial: tracker.tracker_serial || '', // <--- СЕРІЙНИК
     sim_operator: tracker.sim_operator || '',
     sim_number: tracker.sim_number || '',
-    installation_location: tracker.installation_location || '',
+    installation_location: tracker.installation_location || '', // <--- МІСЦЕ
   })),
 
-  drps_data: (formData.drps_data || []).map(drp => ({
-    id: drp.id !== undefined && drp.id !== null ? String(drp.id) : '',
-    drp_type: drp.drp_type || '',
-    height:
-      drp.height !== '' && drp.height !== null ? parseFloat(drp.height) : 0,
-    tank_id:
-      drp.tank_id !== undefined && drp.tank_id !== null
-        ? String(drp.tank_id)
-        : '',
+  drps_data: (formData.drps_data || []).map(lls => ({
+    id: lls.id !== undefined && lls.id !== null ? String(lls.id) : '',
+    drp_type: lls.drp_type || '',
+    drp_height: lls.drp_height ? parseFloat(lls.drp_height) : null,
+    tank_id: String(lls.tank_id || 1),
+    serial_number: lls.serial_number || '', // <--- СЕРІЙНИК ДВРП
+    connection_type: lls.connection_type || '', // <--- ТИП ПІДКЛЮЧЕННЯ
   })),
 });
 
@@ -100,5 +92,9 @@ export const vehiclesApi = {
       }
       throw error;
     }
+  },
+  getUniqueOtherEquipment: async () => {
+    const response = await axios.get(`${BASE_URL}other-equipment/unique`);
+    return response.data.map(item => ({ value: item.name, label: item.name }));
   },
 };

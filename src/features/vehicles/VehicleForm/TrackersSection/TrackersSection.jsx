@@ -24,50 +24,51 @@ export const TrackersSection = ({
   setDicts,
   isLoadingDicts,
 }) => {
-  // Стейт для активної вкладки
   const [activeTab, setActiveTab] = useState(0);
 
-  // Ініціалізуємо масив трекерів
+  // Ініціалізуємо масив трекерів з ключем trackers_data
   useEffect(() => {
-    if (!formData.trackers) {
-      setFormData(prev => ({ ...prev, trackers: [] }));
+    if (!formData.trackers_data) {
+      setFormData(prev => ({ ...prev, trackers_data: [] }));
     }
-  }, [formData.trackers, setFormData]);
+  }, [formData.trackers_data, setFormData]);
 
-  const trackersList = formData.trackers || [];
+  const trackersList = formData.trackers_data || [];
 
   const handleAddTracker = () => {
     setFormData(prev => ({
       ...prev,
-      trackers: [
-        ...(prev.trackers || []),
+      trackers_data: [
+        ...(prev.trackers_data || []),
         {
+          id: '', // Було null, стало ""
           tracker_model: '',
           tracker_imei: '',
+          tracker_serial: '',
           sim_operator: '',
           sim_number: '',
           installation_location: '',
         },
       ],
     }));
-    // Перемикаємось на новостворений трекер
     setActiveTab(trackersList.length);
   };
 
   const handleRemoveTracker = indexToRemove => {
     setFormData(prev => ({
       ...prev,
-      trackers: prev.trackers.filter((_, index) => index !== indexToRemove),
+      trackers_data: prev.trackers_data.filter(
+        (_, index) => index !== indexToRemove
+      ),
     }));
-    // Якщо видалили поточну вкладку, перемикаємось назад
     setActiveTab(prev => Math.max(0, prev - 1));
   };
 
   const handleChange = (index, field, value) => {
     setFormData(prev => {
-      const updatedTrackers = [...prev.trackers];
+      const updatedTrackers = [...prev.trackers_data];
       updatedTrackers[index] = { ...updatedTrackers[index], [field]: value };
-      return { ...prev, trackers: updatedTrackers };
+      return { ...prev, trackers_data: updatedTrackers };
     });
   };
 
@@ -112,7 +113,6 @@ export const TrackersSection = ({
     }),
   };
 
-  // Якщо трекерів ще немає
   if (trackersList.length === 0) {
     return (
       <SectionContainer>
@@ -126,7 +126,6 @@ export const TrackersSection = ({
     );
   }
 
-  // Захист індексу вкладки
   const activeTracker = trackersList[activeTab] || trackersList[0];
   const actualTabIndex = trackersList[activeTab] ? activeTab : 0;
 
@@ -136,7 +135,6 @@ export const TrackersSection = ({
         <SectionTitle>GPS Трекери</SectionTitle>
       </SectionHeader>
 
-      {/* Панель вкладок */}
       <TabsHeader>
         {trackersList.map((_, index) => (
           <TabButton
@@ -153,7 +151,6 @@ export const TrackersSection = ({
         </AddTabButton>
       </TabsHeader>
 
-      {/* Вміст активної вкладки */}
       <TabContent>
         <TabContentHeader>
           <h4>Дані трекера #{actualTabIndex + 1}</h4>
@@ -206,6 +203,17 @@ export const TrackersSection = ({
               }
               placeholder="Напр., 350000000000000"
               maxLength={15}
+            />
+          </div>
+
+          <div>
+            <Label>Серійний номер (S/N)</Label>
+            <Input
+              value={activeTracker.tracker_serial || ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'tracker_serial', e.target.value)
+              }
+              placeholder="Введіть серійник"
             />
           </div>
 

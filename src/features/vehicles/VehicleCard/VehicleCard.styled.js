@@ -41,7 +41,7 @@ export const DetailsSection = styled.div`
   border-top: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  gap: 16px; /* Відстань між блоками (Основні, Паливо, Телематика) */
+  gap: 16px;
 `;
 
 export const SectionTitle = styled.h4`
@@ -64,5 +64,25 @@ export const Field = styled.div`
   span {
     color: #1e293b;
     font-weight: 600;
+  }
+`;
+
+/* НОВІ СТИЛІ ДЛЯ СПИСКІВ (БАКИ, ТРЕКЕРИ, ДРП) */
+export const NestedList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const NestedItem = styled.div`
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #334155;
+
+  strong {
+    color: #1e293b;
   }
 `;

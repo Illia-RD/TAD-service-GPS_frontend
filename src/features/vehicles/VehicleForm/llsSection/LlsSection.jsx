@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import CreatableSelect from 'react-select/creatable';
+import { dictionariesApi as api } from '../../../../services/dictionariesApi'; // ШЛЯХ ЯК У ТРЕКЕРАХ
 import {
   SectionContainer,
   SectionHeader,
@@ -11,58 +13,111 @@ import {
   FormGroup,
   Label,
   Input,
+  Select,
   Button,
   RemoveButton,
-} from './LLSSection.styled';
+} from './LLSSection.styled'; // Увага, стилі з твого LLS
 
-export const LLSSection = ({ formData, setFormData }) => {
+export const LLSSection = ({
+  formData,
+  setFormData,
+  dicts, // ТЕПЕР ТЯГНЕМО З БАТЬКІВСЬКОГО КОМПОНЕНТА
+  setDicts, // ТЕПЕР ТЯГНЕМО З БАТЬКІВСЬКОГО КОМПОНЕНТА
+  isLoadingDicts, // ТЕПЕР ТЯГНЕМО З БАТЬКІВСЬКОГО КОМПОНЕНТА
+}) => {
   const [activeTab, setActiveTab] = useState(0);
-  const lls = formData.lls || [];
-  const tanks = formData.tanks || [];
+
+  useEffect(() => {
+    if (!formData.drps_data) {
+      setFormData(prev => ({ ...prev, drps_data: [] }));
+    }
+  }, [formData.drps_data, setFormData]);
+
+  const llsList = formData.drps_data || [];
+  const tanksList = formData.tanks_data || [];
 
   const handleAddSensor = () => {
-    const nextNumber = lls.length + 1;
     setFormData(prev => ({
       ...prev,
-      lls: [
-        ...(prev.lls || []),
+      drps_data: [
+        ...(prev.drps_data || []),
         {
-          id: null,
-          model: '',
+          id: '',
+          drp_type: '',
+          drp_height: '',
           serial_number: '',
           connection_type: 'RS485',
-          sensor_id: nextNumber,
-          linked_tank: tanks[0]?.tank_number || 1,
+          tank_id: 1,
         },
       ],
     }));
-    setActiveTab(lls.length);
+    setActiveTab(llsList.length);
   };
 
   const handleRemoveSensor = indexToRemove => {
-    setFormData(prev => {
-      const currentSensors = prev.lls || [];
-      const filteredSensors = currentSensors.filter(
-        (_, index) => index !== indexToRemove
-      );
-      return { ...prev, lls: filteredSensors };
-    });
+    setFormData(prev => ({
+      ...prev,
+      drps_data: prev.drps_data.filter((_, index) => index !== indexToRemove),
+    }));
     setActiveTab(prev => Math.max(0, prev - 1));
   };
 
   const handleChange = (index, field, value) => {
     setFormData(prev => {
-      const updatedSensors = [...(prev.lls || [])];
+      const updatedSensors = [...prev.drps_data];
       updatedSensors[index] = { ...updatedSensors[index], [field]: value };
-      return { ...prev, lls: updatedSensors };
+      return { ...prev, drps_data: updatedSensors };
     });
   };
 
-  if (lls.length === 0) {
+  // ФУНКЦІЯ ОДИН-В-ОДИН ЯК У ТРЕКЕРАХ
+  const handleSmartSelect = async (
+    newValue,
+    actionMeta,
+    index,
+    fieldName,
+    dictName,
+    apiDict
+  ) => {
+    if (actionMeta.action === 'create-option') {
+      try {
+        const created = await apiDict.create(newValue.value);
+        setDicts(prev => ({
+          ...prev,
+          [dictName]: [
+            ...(prev[dictName] || []),
+            { value: created.name, label: created.name },
+          ],
+        }));
+        handleChange(index, fieldName, created.name);
+      } catch (err) {
+        alert(`Помилка створення запису в довіднику`);
+      }
+    } else if (newValue) {
+      handleChange(index, fieldName, newValue.value);
+    } else {
+      handleChange(index, fieldName, '');
+    }
+  };
+
+  // СТИЛІ ЯК У ТРЕКЕРАХ
+  const selectStyles = {
+    control: base => ({
+      ...base,
+      borderColor: '#cbd5e1',
+      borderRadius: '6px',
+      padding: '2px',
+      boxShadow: 'none',
+      boxSizing: 'border-box',
+      '&:hover': { borderColor: '#94a3b8' },
+    }),
+  };
+
+  if (llsList.length === 0) {
     return (
       <SectionContainer>
         <SectionHeader>
-          <SectionTitle>Датчики рівня палива (LLS)</SectionTitle>
+          <SectionTitle>Датчики рівня палива (ДВРП)</SectionTitle>
         </SectionHeader>
         <Button type="button" onClick={handleAddSensor}>
           + Додати перший датчик
@@ -71,24 +126,24 @@ export const LLSSection = ({ formData, setFormData }) => {
     );
   }
 
-  const activeSensor = lls[activeTab] || lls[0];
-  const actualTabIndex = lls[activeTab] ? activeTab : 0;
+  const activeSensor = llsList[activeTab] || llsList[0];
+  const actualTabIndex = llsList[activeTab] ? activeTab : 0;
 
   return (
     <SectionContainer>
       <SectionHeader>
-        <SectionTitle>Датчики рівня палива (LLS)</SectionTitle>
+        <SectionTitle>Датчики рівня палива (ДВРП)</SectionTitle>
       </SectionHeader>
 
       <TabsHeader>
-        {lls.map((sensor, index) => (
+        {llsList.map((_, index) => (
           <TabButton
             key={index}
             type="button"
             $active={actualTabIndex === index}
             onClick={() => setActiveTab(index)}
           >
-            Датчик #{sensor.sensor_id || index + 1}
+            Датчик #{index + 1}
           </TabButton>
         ))}
         <AddTabButton type="button" onClick={handleAddSensor}>
@@ -98,7 +153,7 @@ export const LLSSection = ({ formData, setFormData }) => {
 
       <TabContent>
         <TabContentHeader>
-          <h4>Дані датчика #{activeSensor.sensor_id || actualTabIndex + 1}</h4>
+          <h4>Дані датчика #{actualTabIndex + 1}</h4>
           <RemoveButton
             type="button"
             onClick={() => handleRemoveSensor(actualTabIndex)}
@@ -109,18 +164,38 @@ export const LLSSection = ({ formData, setFormData }) => {
 
         <FormGroup>
           <div>
-            <Label>Модель датчика</Label>
-            <Input
-              type="text"
-              value={activeSensor.model || ''}
-              onChange={e =>
-                handleChange(actualTabIndex, 'model', e.target.value)
+            <Label>Модель ДВРП</Label>
+            <CreatableSelect
+              isClearable
+              isDisabled={isLoadingDicts}
+              isLoading={isLoadingDicts}
+              options={dicts.drpTypes || []} // БЕРЕМО СЛОВНИК ДРП З БАТЬКІВСЬКОГО СТЕЙТУ
+              value={
+                activeSensor.drp_type
+                  ? {
+                      value: activeSensor.drp_type,
+                      label: activeSensor.drp_type,
+                    }
+                  : null
               }
-              placeholder="Напр., LLS-2016"
+              onChange={(val, meta) =>
+                handleSmartSelect(
+                  val,
+                  meta,
+                  actualTabIndex,
+                  'drp_type',
+                  'drpTypes', // НАЗВА В СТЕЙТІ dicts (має співпадати з тим, як воно там лежить)
+                  api.drpTypes
+                )
+              }
+              placeholder="Оберіть або введіть..."
+              formatCreateLabel={val => `Створити "${val}"`}
+              styles={selectStyles}
             />
           </div>
+
           <div>
-            <Label>Серійний номер</Label>
+            <Label>Серійник ДВРП</Label>
             <Input
               type="text"
               value={activeSensor.serial_number || ''}
@@ -130,45 +205,54 @@ export const LLSSection = ({ formData, setFormData }) => {
               placeholder="Введіть серійний номер"
             />
           </div>
+
+          <div>
+            <Label>Висота датчика (мм)</Label>
+            <Input
+              type="number"
+              value={activeSensor.drp_height || ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'drp_height', e.target.value)
+              }
+              placeholder="Напр., 700"
+            />
+          </div>
+
           <div>
             <Label>Тип підключення</Label>
-            <Input
-              as="select"
+            <Select
               value={activeSensor.connection_type || 'RS485'}
               onChange={e =>
                 handleChange(actualTabIndex, 'connection_type', e.target.value)
               }
             >
               <option value="RS485">RS485</option>
+              <option value="RS232">RS232</option>
+              <option value="BLE">BLE</option>
               <option value="Аналоговий">Аналоговий</option>
               <option value="Частотний">Частотний</option>
-              <option value="BLE">BLE (Бездротовий)</option>
-            </Input>
+            </Select>
           </div>
+
           <div>
             <Label>Прив'язка до баку</Label>
-            <Input
-              as="select"
-              value={activeSensor.linked_tank || 1}
+            <Select
+              value={activeSensor.tank_id || 1}
               onChange={e =>
-                handleChange(
-                  actualTabIndex,
-                  'linked_tank',
-                  Number(e.target.value)
-                )
+                handleChange(actualTabIndex, 'tank_id', Number(e.target.value))
               }
             >
-              {tanks.length > 0 ? (
-                tanks.map(tank => (
-                  <option key={tank.tank_number} value={tank.tank_number}>
-                    Бак #{tank.tank_number} (
-                    {tank.volume ? `${tank.volume} л` : 'Без об’єму'})
+              {tanksList.length > 0 ? (
+                tanksList.map((tank, index) => (
+                  <option key={index} value={index + 1}>
+                    Бак #{index + 1}{' '}
+                    {tank.tank_volume ? `(${tank.tank_volume} л)` : ''}
                   </option>
                 ))
               ) : (
                 <option value={1}>Бак #1 (Створіть бак)</option>
               )}
-            </Input>
+            </Select>
           </div>
         </FormGroup>
       </TabContent>

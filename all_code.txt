@@ -1,0 +1,1545 @@
+//--VehicleCard
+
+import React, { useState } from 'react';
+import { Edit2 } from 'lucide-react';
+import {
+  Card,
+  CardHeader,
+  Title,
+  Badge,
+  DetailsSection,
+  SectionTitle,
+  DetailsGrid,
+  Field,
+  NestedList,
+  NestedItem,
+} from './VehicleCard.styled';
+
+export const VehicleCard = ({ vehicle, onEdit }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  // Безпечно дістаємо масиви
+  const tanks = vehicle.tanks_data || [];
+  const trackers = vehicle.trackers_data || [];
+  const drps = vehicle.drps_data || [];
+
+  return (
+    <Card onClick={() => setExpanded(!expanded)}>
+      <CardHeader>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            gap: '10px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '12px',
+              width: '100%',
+            }}
+          >
+            <Title
+              style={{
+                margin: 0,
+                flex: '1 1 0%',
+                lineHeight: '1.3',
+                wordBreak: 'break-word',
+              }}
+            >
+              #{vehicle.internal_id || '—'} | {vehicle.plate || '—'}
+            </Title>
+
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                if (onEdit) onEdit(vehicle);
+              }}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                cursor: 'pointer',
+                color: '#64748b',
+                padding: 0,
+              }}
+              title="Редагувати"
+            >
+              <Edit2 size={14} />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <Badge style={{ background: '#dbeafe', color: '#1e40af' }}>
+              {vehicle.group_name || 'Група не вказана'}
+            </Badge>
+            <Badge>
+              {vehicle.make || '—'} {vehicle.model || '—'}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+
+      {expanded && (
+        <DetailsSection>
+          <div>
+            <SectionTitle>Основна інформація</SectionTitle>
+            <DetailsGrid>
+              <Field>
+                VIN: <span>{vehicle.vin || '—'}</span>
+              </Field>
+              <Field>
+                Рік випуску: <span>{vehicle.year || '—'}</span>
+              </Field>
+              <Field>
+                Еко-стандарт: <span>{vehicle.euro_standard || '—'}</span>
+              </Field>
+            </DetailsGrid>
+          </div>
+
+          <div>
+            <SectionTitle>Паливні баки ({tanks.length})</SectionTitle>
+            {tanks.length > 0 ? (
+              <NestedList>
+                {tanks.map((tank, index) => (
+                  <NestedItem key={index}>
+                    <strong>Бак #{index + 1}:</strong>{' '}
+                    {tank.tank_volume
+                      ? `${tank.tank_volume} л`
+                      : "Об'єм не вказано"}{' '}
+                    {tank.tank_dimensions ? `(${tank.tank_dimensions})` : ''}
+                  </NestedItem>
+                ))}
+              </NestedList>
+            ) : (
+              <Field>
+                <span>Немає доданих баків</span>
+              </Field>
+            )}
+          </div>
+
+          <div>
+            <SectionTitle>GPS Трекери ({trackers.length})</SectionTitle>
+            {trackers.length > 0 ? (
+              <NestedList>
+                {trackers.map((tracker, index) => (
+                  <NestedItem key={index}>
+                    <strong>
+                      {tracker.tracker_model || 'Модель не вказана'}
+                    </strong>
+                    <DetailsGrid style={{ marginTop: '4px' }}>
+                      <Field>
+                        IMEI: <span>{tracker.tracker_imei || '—'}</span>
+                      </Field>
+                      <Field>
+                        S/N: <span>{tracker.tracker_serial || '—'}</span>
+                      </Field>
+                      <Field>
+                        SIM:{' '}
+                        <span>
+                          {tracker.sim_number || '—'} (
+                          {tracker.sim_operator || '—'})
+                        </span>
+                      </Field>
+                      <Field>
+                        Місце:{' '}
+                        <span>{tracker.installation_location || '—'}</span>
+                      </Field>
+                    </DetailsGrid>
+                  </NestedItem>
+                ))}
+              </NestedList>
+            ) : (
+              <Field>
+                <span>Немає доданих трекерів</span>
+              </Field>
+            )}
+          </div>
+
+          <div>
+            <SectionTitle>
+              Датчики рівня палива LLS ({drps.length})
+            </SectionTitle>
+            {drps.length > 0 ? (
+              <NestedList>
+                {drps.map((drp, index) => (
+                  <NestedItem key={index}>
+                    <strong>
+                      {drp.model || 'Модель не вказана'} (S/N:{' '}
+                      {drp.serial_number || '—'})
+                    </strong>
+                    <div
+                      style={{
+                        fontSize: '13px',
+                        color: '#64748b',
+                        marginTop: '4px',
+                      }}
+                    >
+                      Підключення: {drp.connection_type || '—'} | Прив'язка: Бак
+                      #{drp.linked_tank || '—'}
+                    </div>
+                  </NestedItem>
+                ))}
+              </NestedList>
+            ) : (
+              <Field>
+                <span>Немає доданих датчиків</span>
+              </Field>
+            )}
+          </div>
+        </DetailsSection>
+      )}
+    </Card>
+  );
+};
+
+//---VehicleTable
+import React from 'react';
+import { Edit2 } from 'lucide-react';
+import {
+  TableContainer,
+  Table,
+  Th,
+  Td,
+  Badge,
+  ActionButton,
+} from './VehicleTable.styled';
+
+export const VehicleTable = ({ vehicles, onEdit }) => {
+  if (!vehicles || vehicles.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+        Немає даних для відображення
+      </div>
+    );
+  }
+
+  return (
+    <TableContainer>
+      <Table>
+        <thead>
+          <tr>
+            <Th>ID / ДНЗ</Th>
+            <Th>Група</Th>
+            <Th>Марка / Модель</Th>
+            <Th>VIN / Рік</Th>
+            <Th>Телематика</Th>
+            <Th>Дії</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {vehicles.map(vehicle => (
+            <tr key={vehicle.id || vehicle.internal_id}>
+              <Td>
+                <strong>#{vehicle.internal_id}</strong>
+                <br />
+                {vehicle.plate}
+              </Td>
+              <Td>
+                <Badge className="primary">{vehicle.group_name || '—'}</Badge>
+              </Td>
+              <Td>
+                {vehicle.make} {vehicle.model}
+              </Td>
+              <Td>
+                <span style={{ color: '#64748b', fontSize: '12px' }}>
+                  {vehicle.vin || '—'}
+                </span>
+                <br />
+                {vehicle.year || '—'}
+              </Td>
+              <Td>
+                {vehicle.tracker_model || '—'}
+                {vehicle.sim_number && (
+                  <>
+                    <br />
+                    <span style={{ color: '#64748b', fontSize: '12px' }}>
+                      {vehicle.sim_number}
+                    </span>
+                  </>
+                )}
+              </Td>
+              <Td>
+                <ActionButton
+                  onClick={() => onEdit && onEdit(vehicle)}
+                  title="Редагувати"
+                >
+                  <Edit2 size={14} />
+                </ActionButton>
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </TableContainer>
+  );
+};
+
+
+
+//---VehicleForm
+import React, { useState, useEffect } from 'react';
+import { GeneralInfo } from './GeneralInfo/GeneralInfo';
+import { TanksSection } from './TanksSection/TanksSection';
+import { TrackersSection } from './TrackersSection/TrackersSection';
+import { LLSSection } from './LlsSection/LlsSection';
+import {
+  FormWrapper,
+  FormTitle,
+  FormActions,
+  Button,
+  SaveButton,
+} from './VehicleForm.styled';
+
+import { dictionariesApi as api } from '../../../services/dictionariesApi';
+
+// ЗМІНЕНО: Приймаємо onCancelEdit замість onCancel, щоб відповідало твоєму VehicleList
+export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
+  const [formData, setFormData] = useState({
+    internal_id: '',
+    plate: '',
+    make: '',
+    model: '',
+    vin: '',
+    year: '',
+    euro_standard: '',
+    group_name: '',
+    trackers_data: [], // замість trackers
+    tanks_data: [], // замість tanks
+    drps_data: [], // замість lls
+    additional_equipment: [],
+  });
+
+  // ЗМІНЕНО: Додали стейти для довідників з GeneralInfo
+  const [dicts, setDicts] = useState({
+    trackerModels: [],
+    simOperators: [],
+    drpTypes: [],
+    makes: [],
+    models: [],
+    euroStandards: [],
+    groups: [],
+  });
+  const [isLoadingDicts, setIsLoadingDicts] = useState(true);
+
+  useEffect(() => {
+    setFormData(initialData || { tanks: [], lls: [], trackers: [] });
+  }, [initialData]);
+
+  useEffect(() => {
+    const fetchDictionaries = async () => {
+      setIsLoadingDicts(true);
+      try {
+        // ЗМІНЕНО: Тепер ми вантажимо ВСІ довідники, а не тільки трекери
+        const [trackers, sims, drps, makes, models, euros, groups] =
+          await Promise.all([
+            api.trackerModels.getAll(),
+            api.simOperators.getAll(),
+            api.drpTypes.getAll(),
+            api.makes.getAll(),
+            api.models.getAll(),
+            api.euroStandards.getAll(),
+            api.groups.getAll(),
+          ]);
+
+        setDicts({
+          trackerModels: trackers.map(t => ({ value: t.name, label: t.name })),
+          simOperators: sims.map(s => ({ value: s.name, label: s.name })),
+          drpTypes: drps.map(d => ({ value: d.name, label: d.name })),
+          makes: makes.map(m => ({ value: m.name, label: m.name })),
+          models: models.map(m => ({ value: m.name, label: m.name })),
+          euroStandards: euros.map(e => ({ value: e.name, label: e.name })),
+          groups: groups.map(g => ({ value: g.name, label: g.name })),
+        });
+      } catch (error) {
+        console.error('Помилка завантаження довідників:', error);
+      } finally {
+        setIsLoadingDicts(false);
+      }
+    };
+
+    fetchDictionaries();
+  }, []);
+
+  const handleSubmit = e => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  const handleCancel = () => {
+    const defaultData = { tanks: [], lls: [], trackers: [] };
+    const hasChanges =
+      JSON.stringify(formData) !== JSON.stringify(initialData || defaultData);
+
+    if (hasChanges) {
+      const confirmDiscard = window.confirm(
+        'Є незбережені дані. Бажаєте вийти БЕЗ збереження? (ОК - вийти, Скасування - залишитись)'
+      );
+      if (confirmDiscard) {
+        if (typeof onCancelEdit === 'function') onCancelEdit();
+      }
+    } else {
+      if (typeof onCancelEdit === 'function') onCancelEdit();
+    }
+  };
+
+  const sectionProps = {
+    formData,
+    setFormData,
+    dicts,
+    setDicts,
+    isLoadingDicts,
+  };
+
+  return (
+    <FormWrapper>
+      <FormTitle>
+        {initialData?.id ? 'Редагування автомобіля' : 'Додавання автомобіля'}
+      </FormTitle>
+
+      <form onSubmit={handleSubmit}>
+        <GeneralInfo {...sectionProps} />
+        <TanksSection formData={formData} setFormData={setFormData} />
+        <TrackersSection {...sectionProps} />
+        <LLSSection {...sectionProps} />
+
+        <FormActions>
+          <Button type="button" onClick={handleCancel}>
+            Скасувати
+          </Button>
+          <SaveButton type="submit">Зберегти</SaveButton>
+        </FormActions>
+      </form>
+    </FormWrapper>
+  );
+};
+
+//---GeneralInfo
+import React from 'react';
+import CreatableSelect from 'react-select/creatable';
+import { FormGroup, Label, Input, Select } from './GeneralInfo.styled';
+import { dictionariesApi as api } from '../../../../services/dictionariesApi';
+
+export const GeneralInfo = ({
+  formData,
+  setFormData,
+  dicts,
+  setDicts,
+  isLoadingDicts,
+}) => {
+  const handleChange = e => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSmartSelect = async (
+    newValue,
+    actionMeta,
+    fieldName,
+    dictName,
+    apiDict
+  ) => {
+    if (actionMeta.action === 'create-option') {
+      try {
+        const created = await apiDict.create(newValue.value);
+        setDicts(prev => ({
+          ...prev,
+          [dictName]: [
+            ...(prev[dictName] || []), // <--- ТУТ: додали || []
+            { value: created.name, label: created.name },
+          ],
+        }));
+        setFormData(prev => ({ ...prev, [fieldName]: created.name }));
+      } catch (err) {
+        alert(`Помилка створення запису в довіднику`);
+      }
+    } else if (newValue) {
+      setFormData(prev => ({ ...prev, [fieldName]: newValue.value }));
+    } else {
+      setFormData(prev => ({ ...prev, [fieldName]: '' }));
+    }
+  };
+
+  const selectStyles = {
+    control: base => ({
+      ...base,
+      borderColor: '#cbd5e1',
+      borderRadius: '6px',
+      padding: '2px',
+      boxShadow: 'none',
+      '&:hover': { borderColor: '#94a3b8' },
+    }),
+  };
+
+  const SmartSelectField = ({ label, fieldName, dictName, apiDict }) => (
+    <div>
+      <Label>{label}</Label>
+      <CreatableSelect
+        isClearable
+        isDisabled={isLoadingDicts}
+        isLoading={isLoadingDicts}
+        options={dicts[dictName] || []} // <--- ТУТ: додали || []
+        value={
+          formData[fieldName]
+            ? { value: formData[fieldName], label: formData[fieldName] }
+            : null
+        }
+        onChange={(val, meta) =>
+          handleSmartSelect(val, meta, fieldName, dictName, apiDict)
+        }
+        placeholder="Оберіть або введіть..."
+        formatCreateLabel={val => `Створити "${val}"`}
+        styles={selectStyles}
+      />
+    </div>
+  );
+
+  return (
+    <FormGroup>
+      {/* Додано поле статусу */}
+      <div>
+        <Label>Статус автомобіля</Label>
+        <Select
+          name="status"
+          value={formData.status || 'connected'}
+          onChange={handleChange}
+        >
+          <option value="connected">🟢 Підключено до трекінгу</option>
+          <option value="disconnected">🔴 Відключено</option>
+          <option value="repair">🟡 В ремонті</option>
+          <option value="sold">⚪ Продаж</option>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Порядковий номер (ID)</Label>
+        <Input
+          name="internal_id"
+          value={formData.internal_id || ''}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div>
+        <Label>Держномер</Label>
+        <Input
+          name="plate"
+          value={formData.plate || ''}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <SmartSelectField
+        label="Марка"
+        fieldName="make"
+        dictName="makes"
+        apiDict={api.makes}
+      />
+      <SmartSelectField
+        label="Модель"
+        fieldName="model"
+        dictName="models"
+        apiDict={api.models}
+      />
+      <div>
+        <Label>VIN-код</Label>
+        <Input name="vin" value={formData.vin || ''} onChange={handleChange} />
+      </div>
+      <div>
+        <Label>Рік випуску</Label>
+        <Input
+          name="year"
+          type="number"
+          value={formData.year || ''}
+          onChange={handleChange}
+        />
+      </div>
+      <SmartSelectField
+        label="Еко-стандарт"
+        fieldName="euro_standard"
+        dictName="euroStandards"
+        apiDict={api.euroStandards}
+      />
+      <SmartSelectField
+        label="Група авто"
+        fieldName="group_name"
+        dictName="groups"
+        apiDict={api.groups}
+      />
+    </FormGroup>
+  );
+};
+
+//---TanksSection
+import React, { useEffect, useState } from 'react';
+import {
+  SectionContainer,
+  SectionHeader,
+  SectionTitle,
+  TabsHeader,
+  TabButton,
+  AddTabButton,
+  TabContent,
+  TabContentHeader,
+  FormGroup,
+  Label,
+  Input,
+  Button,
+  RemoveButton,
+} from './TanksSection.styled';
+
+export const TanksSection = ({ formData, setFormData }) => {
+  const [activeTab, setActiveTab] = useState(0);
+
+  useEffect(() => {
+    if (!formData.tanks_data) {
+      setFormData(prev => ({ ...prev, tanks_data: [] }));
+    }
+  }, [formData.tanks_data, setFormData]);
+
+  const tanksList = formData.tanks_data || [];
+
+  const handleAddTank = () => {
+    setFormData(prev => ({
+      ...prev,
+      tanks_data: [
+        ...(prev.tanks_data || []),
+        {
+          id: '',
+          tank_volume: '',
+          tank_dimensions: '',
+        },
+      ],
+    }));
+    setActiveTab(tanksList.length);
+  };
+
+  const handleRemoveTank = indexToRemove => {
+    setFormData(prev => ({
+      ...prev,
+      tanks_data: prev.tanks_data.filter((_, index) => index !== indexToRemove),
+    }));
+    setActiveTab(prev => Math.max(0, prev - 1));
+  };
+
+  const handleChange = (index, field, value) => {
+    setFormData(prev => {
+      const updatedTanks = [...prev.tanks_data];
+      updatedTanks[index] = { ...updatedTanks[index], [field]: value };
+      return { ...prev, tanks_data: updatedTanks };
+    });
+  };
+
+  if (tanksList.length === 0) {
+    return (
+      <SectionContainer>
+        <SectionHeader>
+          <SectionTitle>Паливні баки</SectionTitle>
+        </SectionHeader>
+        <Button type="button" onClick={handleAddTank}>
+          + Додати перший бак
+        </Button>
+      </SectionContainer>
+    );
+  }
+
+  const activeTank = tanksList[activeTab] || tanksList[0];
+  const actualTabIndex = tanksList[activeTab] ? activeTab : 0;
+
+  return (
+    <SectionContainer>
+      <SectionHeader>
+        <SectionTitle>Паливні баки</SectionTitle>
+      </SectionHeader>
+
+      <TabsHeader>
+        {tanksList.map((_, index) => (
+          <TabButton
+            key={index}
+            type="button"
+            $active={actualTabIndex === index}
+            onClick={() => setActiveTab(index)}
+          >
+            Бак #{index + 1}
+          </TabButton>
+        ))}
+        <AddTabButton type="button" onClick={handleAddTank}>
+          + Додати
+        </AddTabButton>
+      </TabsHeader>
+
+      <TabContent>
+        <TabContentHeader>
+          <h4>Дані бака #{actualTabIndex + 1}</h4>
+          <RemoveButton
+            type="button"
+            onClick={() => handleRemoveTank(actualTabIndex)}
+          >
+            Видалити цей бак
+          </RemoveButton>
+        </TabContentHeader>
+
+        <FormGroup>
+          <div>
+            <Label>Об'єм (л)</Label>
+            <Input
+              type="number"
+              value={activeTank.tank_volume ?? ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'tank_volume', e.target.value)
+              }
+              placeholder="Напр., 500"
+            />
+          </div>
+
+          <div>
+            <Label>Розміри / Габарити</Label>
+            <Input
+              value={activeTank.tank_dimensions || ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'tank_dimensions', e.target.value)
+              }
+              placeholder="ДхШхВ"
+            />
+          </div>
+        </FormGroup>
+      </TabContent>
+    </SectionContainer>
+  );
+};
+
+//---TrackersSection
+import React, { useEffect, useState } from 'react';
+import CreatableSelect from 'react-select/creatable';
+import { dictionariesApi as api } from '../../../../services/dictionariesApi';
+import {
+  SectionContainer,
+  SectionHeader,
+  SectionTitle,
+  TabsHeader,
+  TabButton,
+  AddTabButton,
+  TabContent,
+  TabContentHeader,
+  FormGroup,
+  Label,
+  Input,
+  Button,
+  RemoveButton,
+} from './TrackersSection.styled';
+
+export const TrackersSection = ({
+  formData,
+  setFormData,
+  dicts,
+  setDicts,
+  isLoadingDicts,
+}) => {
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Ініціалізуємо масив трекерів з ключем trackers_data
+  useEffect(() => {
+    if (!formData.trackers_data) {
+      setFormData(prev => ({ ...prev, trackers_data: [] }));
+    }
+  }, [formData.trackers_data, setFormData]);
+
+  const trackersList = formData.trackers_data || [];
+
+  const handleAddTracker = () => {
+    setFormData(prev => ({
+      ...prev,
+      trackers_data: [
+        ...(prev.trackers_data || []),
+        {
+          id: '', // Було null, стало ""
+          tracker_model: '',
+          tracker_imei: '',
+          tracker_serial: '',
+          sim_operator: '',
+          sim_number: '',
+          installation_location: '',
+        },
+      ],
+    }));
+    setActiveTab(trackersList.length);
+  };
+
+  const handleRemoveTracker = indexToRemove => {
+    setFormData(prev => ({
+      ...prev,
+      trackers_data: prev.trackers_data.filter(
+        (_, index) => index !== indexToRemove
+      ),
+    }));
+    setActiveTab(prev => Math.max(0, prev - 1));
+  };
+
+  const handleChange = (index, field, value) => {
+    setFormData(prev => {
+      const updatedTrackers = [...prev.trackers_data];
+      updatedTrackers[index] = { ...updatedTrackers[index], [field]: value };
+      return { ...prev, trackers_data: updatedTrackers };
+    });
+  };
+
+  const handleSmartSelect = async (
+    newValue,
+    actionMeta,
+    index,
+    fieldName,
+    dictName,
+    apiDict
+  ) => {
+    if (actionMeta.action === 'create-option') {
+      try {
+        const created = await apiDict.create(newValue.value);
+        setDicts(prev => ({
+          ...prev,
+          [dictName]: [
+            ...(prev[dictName] || []),
+            { value: created.name, label: created.name },
+          ],
+        }));
+        handleChange(index, fieldName, created.name);
+      } catch (err) {
+        alert(`Помилка створення запису в довіднику`);
+      }
+    } else if (newValue) {
+      handleChange(index, fieldName, newValue.value);
+    } else {
+      handleChange(index, fieldName, '');
+    }
+  };
+
+  const selectStyles = {
+    control: base => ({
+      ...base,
+      borderColor: '#cbd5e1',
+      borderRadius: '6px',
+      padding: '2px',
+      boxShadow: 'none',
+      boxSizing: 'border-box',
+      '&:hover': { borderColor: '#94a3b8' },
+    }),
+  };
+
+  if (trackersList.length === 0) {
+    return (
+      <SectionContainer>
+        <SectionHeader>
+          <SectionTitle>GPS Трекери</SectionTitle>
+        </SectionHeader>
+        <Button type="button" onClick={handleAddTracker}>
+          + Додати перший трекер
+        </Button>
+      </SectionContainer>
+    );
+  }
+
+  const activeTracker = trackersList[activeTab] || trackersList[0];
+  const actualTabIndex = trackersList[activeTab] ? activeTab : 0;
+
+  return (
+    <SectionContainer>
+      <SectionHeader>
+        <SectionTitle>GPS Трекери</SectionTitle>
+      </SectionHeader>
+
+      <TabsHeader>
+        {trackersList.map((_, index) => (
+          <TabButton
+            key={index}
+            type="button"
+            $active={actualTabIndex === index}
+            onClick={() => setActiveTab(index)}
+          >
+            Трекер #{index + 1}
+          </TabButton>
+        ))}
+        <AddTabButton type="button" onClick={handleAddTracker}>
+          + Додати
+        </AddTabButton>
+      </TabsHeader>
+
+      <TabContent>
+        <TabContentHeader>
+          <h4>Дані трекера #{actualTabIndex + 1}</h4>
+          <RemoveButton
+            type="button"
+            onClick={() => handleRemoveTracker(actualTabIndex)}
+          >
+            Видалити цей трекер
+          </RemoveButton>
+        </TabContentHeader>
+
+        <FormGroup>
+          <div>
+            <Label>Модель трекера</Label>
+            <CreatableSelect
+              isClearable
+              isDisabled={isLoadingDicts}
+              isLoading={isLoadingDicts}
+              options={dicts.trackerModels || []}
+              value={
+                activeTracker.tracker_model
+                  ? {
+                      value: activeTracker.tracker_model,
+                      label: activeTracker.tracker_model,
+                    }
+                  : null
+              }
+              onChange={(val, meta) =>
+                handleSmartSelect(
+                  val,
+                  meta,
+                  actualTabIndex,
+                  'tracker_model',
+                  'trackerModels',
+                  api.trackerModels
+                )
+              }
+              placeholder="Оберіть..."
+              formatCreateLabel={val => `Створити "${val}"`}
+              styles={selectStyles}
+            />
+          </div>
+
+          <div>
+            <Label>IMEI трекера</Label>
+            <Input
+              value={activeTracker.tracker_imei || ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'tracker_imei', e.target.value)
+              }
+              placeholder="Напр., 350000000000000"
+              maxLength={15}
+            />
+          </div>
+
+          <div>
+            <Label>Серійний номер (S/N)</Label>
+            <Input
+              value={activeTracker.tracker_serial || ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'tracker_serial', e.target.value)
+              }
+              placeholder="Введіть серійник"
+            />
+          </div>
+
+          <div>
+            <Label>Оператор SIM</Label>
+            <CreatableSelect
+              isClearable
+              isDisabled={isLoadingDicts}
+              isLoading={isLoadingDicts}
+              options={dicts.simOperators || []}
+              value={
+                activeTracker.sim_operator
+                  ? {
+                      value: activeTracker.sim_operator,
+                      label: activeTracker.sim_operator,
+                    }
+                  : null
+              }
+              onChange={(val, meta) =>
+                handleSmartSelect(
+                  val,
+                  meta,
+                  actualTabIndex,
+                  'sim_operator',
+                  'simOperators',
+                  api.simOperators
+                )
+              }
+              placeholder="Оберіть..."
+              formatCreateLabel={val => `Створити "${val}"`}
+              styles={selectStyles}
+            />
+          </div>
+
+          <div>
+            <Label>Номер SIM-карти</Label>
+            <Input
+              value={activeTracker.sim_number || ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'sim_number', e.target.value)
+              }
+              placeholder="+380..."
+            />
+          </div>
+
+          <div>
+            <Label>Місце встановлення</Label>
+            <Input
+              value={activeTracker.installation_location || ''}
+              onChange={e =>
+                handleChange(
+                  actualTabIndex,
+                  'installation_location',
+                  e.target.value
+                )
+              }
+              placeholder="Напр., за панеллю приладів"
+            />
+          </div>
+        </FormGroup>
+      </TabContent>
+    </SectionContainer>
+  );
+};
+
+//---LLSSection
+import React, { useEffect, useState } from 'react';
+import CreatableSelect from 'react-select/creatable';
+import { dictionariesApi as api } from '../../../../services/dictionariesApi'; // ШЛЯХ ЯК У ТРЕКЕРАХ
+import {
+  SectionContainer,
+  SectionHeader,
+  SectionTitle,
+  TabsHeader,
+  TabButton,
+  AddTabButton,
+  TabContent,
+  TabContentHeader,
+  FormGroup,
+  Label,
+  Input,
+  Select,
+  Button,
+  RemoveButton,
+} from './LLSSection.styled'; // Увага, стилі з твого LLS
+
+export const LLSSection = ({
+  formData,
+  setFormData,
+  dicts, // ТЕПЕР ТЯГНЕМО З БАТЬКІВСЬКОГО КОМПОНЕНТА
+  setDicts, // ТЕПЕР ТЯГНЕМО З БАТЬКІВСЬКОГО КОМПОНЕНТА
+  isLoadingDicts, // ТЕПЕР ТЯГНЕМО З БАТЬКІВСЬКОГО КОМПОНЕНТА
+}) => {
+  const [activeTab, setActiveTab] = useState(0);
+
+  useEffect(() => {
+    if (!formData.drps_data) {
+      setFormData(prev => ({ ...prev, drps_data: [] }));
+    }
+  }, [formData.drps_data, setFormData]);
+
+  const llsList = formData.drps_data || [];
+  const tanksList = formData.tanks_data || [];
+
+  const handleAddSensor = () => {
+    setFormData(prev => ({
+      ...prev,
+      drps_data: [
+        ...(prev.drps_data || []),
+        {
+          id: '',
+          drp_type: '',
+          drp_height: '',
+          serial_number: '',
+          connection_type: 'RS485',
+          tank_id: 1,
+        },
+      ],
+    }));
+    setActiveTab(llsList.length);
+  };
+
+  const handleRemoveSensor = indexToRemove => {
+    setFormData(prev => ({
+      ...prev,
+      drps_data: prev.drps_data.filter((_, index) => index !== indexToRemove),
+    }));
+    setActiveTab(prev => Math.max(0, prev - 1));
+  };
+
+  const handleChange = (index, field, value) => {
+    setFormData(prev => {
+      const updatedSensors = [...prev.drps_data];
+      updatedSensors[index] = { ...updatedSensors[index], [field]: value };
+      return { ...prev, drps_data: updatedSensors };
+    });
+  };
+
+  // ФУНКЦІЯ ОДИН-В-ОДИН ЯК У ТРЕКЕРАХ
+  const handleSmartSelect = async (
+    newValue,
+    actionMeta,
+    index,
+    fieldName,
+    dictName,
+    apiDict
+  ) => {
+    if (actionMeta.action === 'create-option') {
+      try {
+        const created = await apiDict.create(newValue.value);
+        setDicts(prev => ({
+          ...prev,
+          [dictName]: [
+            ...(prev[dictName] || []),
+            { value: created.name, label: created.name },
+          ],
+        }));
+        handleChange(index, fieldName, created.name);
+      } catch (err) {
+        alert(`Помилка створення запису в довіднику`);
+      }
+    } else if (newValue) {
+      handleChange(index, fieldName, newValue.value);
+    } else {
+      handleChange(index, fieldName, '');
+    }
+  };
+
+  // СТИЛІ ЯК У ТРЕКЕРАХ
+  const selectStyles = {
+    control: base => ({
+      ...base,
+      borderColor: '#cbd5e1',
+      borderRadius: '6px',
+      padding: '2px',
+      boxShadow: 'none',
+      boxSizing: 'border-box',
+      '&:hover': { borderColor: '#94a3b8' },
+    }),
+  };
+
+  if (llsList.length === 0) {
+    return (
+      <SectionContainer>
+        <SectionHeader>
+          <SectionTitle>Датчики рівня палива (ДВРП)</SectionTitle>
+        </SectionHeader>
+        <Button type="button" onClick={handleAddSensor}>
+          + Додати перший датчик
+        </Button>
+      </SectionContainer>
+    );
+  }
+
+  const activeSensor = llsList[activeTab] || llsList[0];
+  const actualTabIndex = llsList[activeTab] ? activeTab : 0;
+
+  return (
+    <SectionContainer>
+      <SectionHeader>
+        <SectionTitle>Датчики рівня палива (ДВРП)</SectionTitle>
+      </SectionHeader>
+
+      <TabsHeader>
+        {llsList.map((_, index) => (
+          <TabButton
+            key={index}
+            type="button"
+            $active={actualTabIndex === index}
+            onClick={() => setActiveTab(index)}
+          >
+            Датчик #{index + 1}
+          </TabButton>
+        ))}
+        <AddTabButton type="button" onClick={handleAddSensor}>
+          + Додати
+        </AddTabButton>
+      </TabsHeader>
+
+      <TabContent>
+        <TabContentHeader>
+          <h4>Дані датчика #{actualTabIndex + 1}</h4>
+          <RemoveButton
+            type="button"
+            onClick={() => handleRemoveSensor(actualTabIndex)}
+          >
+            Видалити цей датчик
+          </RemoveButton>
+        </TabContentHeader>
+
+        <FormGroup>
+          <div>
+            <Label>Модель ДВРП</Label>
+            <CreatableSelect
+              isClearable
+              isDisabled={isLoadingDicts}
+              isLoading={isLoadingDicts}
+              options={dicts.drpTypes || []} // БЕРЕМО СЛОВНИК ДРП З БАТЬКІВСЬКОГО СТЕЙТУ
+              value={
+                activeSensor.drp_type
+                  ? {
+                      value: activeSensor.drp_type,
+                      label: activeSensor.drp_type,
+                    }
+                  : null
+              }
+              onChange={(val, meta) =>
+                handleSmartSelect(
+                  val,
+                  meta,
+                  actualTabIndex,
+                  'drp_type',
+                  'drpTypes', // НАЗВА В СТЕЙТІ dicts (має співпадати з тим, як воно там лежить)
+                  api.drpTypes
+                )
+              }
+              placeholder="Оберіть або введіть..."
+              formatCreateLabel={val => `Створити "${val}"`}
+              styles={selectStyles}
+            />
+          </div>
+
+          <div>
+            <Label>Серійник ДВРП</Label>
+            <Input
+              type="text"
+              value={activeSensor.serial_number || ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'serial_number', e.target.value)
+              }
+              placeholder="Введіть серійний номер"
+            />
+          </div>
+
+          <div>
+            <Label>Висота датчика (мм)</Label>
+            <Input
+              type="number"
+              value={activeSensor.drp_height || ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'drp_height', e.target.value)
+              }
+              placeholder="Напр., 700"
+            />
+          </div>
+
+          <div>
+            <Label>Тип підключення</Label>
+            <Select
+              value={activeSensor.connection_type || 'RS485'}
+              onChange={e =>
+                handleChange(actualTabIndex, 'connection_type', e.target.value)
+              }
+            >
+              <option value="RS485">RS485</option>
+              <option value="RS232">RS232</option>
+              <option value="BLE">BLE</option>
+              <option value="Аналоговий">Аналоговий</option>
+              <option value="Частотний">Частотний</option>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Прив'язка до баку</Label>
+            <Select
+              value={activeSensor.tank_id || 1}
+              onChange={e =>
+                handleChange(actualTabIndex, 'tank_id', Number(e.target.value))
+              }
+            >
+              {tanksList.length > 0 ? (
+                tanksList.map((tank, index) => (
+                  <option key={index} value={index + 1}>
+                    Бак #{index + 1}{' '}
+                    {tank.tank_volume ? `(${tank.tank_volume} л)` : ''}
+                  </option>
+                ))
+              ) : (
+                <option value={1}>Бак #1 (Створіть бак)</option>
+              )}
+            </Select>
+          </div>
+        </FormGroup>
+      </TabContent>
+    </SectionContainer>
+  );
+};
+
+//---vehiclesApi
+import axios from 'axios';
+
+const BASE_URL = 'http://127.0.0.1:8000/api/vehicles/';
+
+const mapVehicleData = dbData => ({
+  id: dbData.id,
+  plate: dbData.plate || '—',
+  vin: dbData.vin || '—',
+  make: dbData.make || '—',
+  model: dbData.model || '—',
+  internal_id: dbData.internal_id || '—',
+  year: dbData.year || null,
+  euro_standard: dbData.euro_standard || '—',
+  group_name: dbData.group_name || 'Без групи',
+
+  tanks_data: dbData.tanks_data || [],
+  trackers_data: dbData.trackers_data || [],
+  drps_data: dbData.drps_data || [],
+
+  tank_volume: dbData.tank_volume || 0,
+  tank_dimensions: dbData.tank_dimensions || '—',
+  tracker_model: dbData.tracker_model || '—',
+  tracker_sn: dbData.tracker_sn || '—',
+  tracker_imei: dbData.tracker_imei || '—',
+  sim_operator: dbData.sim_operator || '—',
+  sim_number: dbData.sim_number || '—',
+  drp_type: dbData.drp_type || '—',
+  drp_height: dbData.drp_height || 0,
+  other_equipment: dbData.other_equipment || '—',
+});
+
+const preparePayload = formData => ({
+  ...formData,
+  year: formData.year ? parseInt(formData.year) : null,
+  tank_volume: formData.tank_volume ? parseFloat(formData.tank_volume) : 0,
+  drp_height: formData.drp_height ? parseFloat(formData.drp_height) : 0,
+
+  tanks_data: (formData.tanks_data || []).map(tank => ({
+    id: tank.id !== undefined && tank.id !== null ? String(tank.id) : '',
+    tank_volume:
+      tank.tank_volume !== '' && tank.tank_volume !== null
+        ? parseFloat(tank.tank_volume)
+        : 0,
+    tank_dimensions: tank.tank_dimensions || '',
+  })),
+
+  trackers_data: (formData.trackers_data || []).map(tracker => ({
+    id:
+      tracker.id !== undefined && tracker.id !== null ? String(tracker.id) : '',
+    tracker_model: tracker.tracker_model || '',
+    tracker_imei: tracker.tracker_imei || '',
+    tracker_serial: tracker.tracker_serial || '',
+    sim_operator: tracker.sim_operator || '',
+    sim_number: tracker.sim_number || '',
+    installation_location: tracker.installation_location || '',
+  })),
+
+  drps_data: (formData.drps_data || []).map(lls => ({
+    id: lls.id !== undefined && lls.id !== null ? String(lls.id) : '',
+    drp_type: lls.drp_type || '',
+    drp_height: lls.drp_height ? parseFloat(lls.drp_height) : null,
+    tank_id: String(lls.tank_id || 1),
+    serial_number: lls.serial_number || '',
+    connection_type: lls.connection_type || '',
+  })),
+});
+
+export const vehiclesApi = {
+  getAll: async () => {
+    const response = await axios.get(BASE_URL);
+    return response.data.map(mapVehicleData);
+  },
+
+  create: async formData => {
+    try {
+      const payload = preparePayload(formData);
+      const response = await axios.post(BASE_URL, payload);
+      return mapVehicleData(response.data);
+    } catch (error) {
+      if (error.response && error.response.status === 422) {
+        console.error(
+          'FASTAPI 422 CREATE DETAILS:',
+          JSON.stringify(error.response.data.detail, null, 2)
+        );
+      }
+      throw error;
+    }
+  },
+
+  update: async (id, formData) => {
+    try {
+      const payload = preparePayload(formData);
+      const response = await axios.put(`${BASE_URL}${id}/`, payload);
+      return mapVehicleData(response.data);
+    } catch (error) {
+      if (error.response && error.response.status === 422) {
+        console.error(
+          'FASTAPI 422 UPDATE DETAILS:',
+          JSON.stringify(error.response.data.detail, null, 2)
+        );
+      }
+      throw error;
+    }
+  },
+};
+
+//---dictionariesApi
+import axios from 'axios';
+
+const BASE_URL = 'http://127.0.0.1:8000/api/dictionaries/';
+
+const generateApi = endpoint => ({
+  getAll: async () => (await axios.get(`${BASE_URL}${endpoint}`)).data,
+  create: async name =>
+    (await axios.post(`${BASE_URL}${endpoint}`, { name })).data,
+});
+
+export const dictionariesApi = {
+  makes: generateApi('makes'),
+  models: generateApi('models'),
+  drpTypes: generateApi('drp-types'),
+  tasks: generateApi('tasks'),
+  euroStandards: generateApi('euro-standards'),
+  trackerModels: generateApi('tracker-models'),
+  simOperators: generateApi('sim-operators'),
+  groups: generateApi('groups'),
+};
+
+
+//-----------БЕКЕНД------------
+
+//schemas/vehicle
+from typing import List, Optional  # noqa: UP035
+
+from pydantic import BaseModel, Field
+
+# --- ДОПОМІЖНІ МОДЕЛІ ДЛЯ ОБЛАДНАННЯ ---
+
+
+class TankItem(BaseModel):
+    id: str  # Унікальний ID баку (наприклад, згенерований uuid на фронті)
+    tank_volume: Optional[float] = None
+    tank_dimensions: Optional[str] = None
+    # Масив drps звідси повністю прибрали
+
+
+class DrpItem(BaseModel):
+    id: str  # Унікальний ID датчика
+    drp_type: Optional[str] = None
+    drp_height: Optional[float] = None
+    tank_id: str  # Зв'язок: вказує, в який саме бак врізано цей ДВРП
+
+
+class TrackerItem(BaseModel):
+    id: str  # Унікальний ID трекера
+    tracker_model: Optional[str] = None
+    tracker_sn: Optional[str] = None
+    tracker_imei: Optional[str] = None
+    sim_operator: Optional[str] = None
+    sim_number: Optional[str] = None
+
+
+# --- ОСНОВНІ СХЕМИ АВТОМОБІЛЯ ---
+
+
+class VehicleBase(BaseModel):
+    internal_id: str
+    plate: str
+    make: str
+    model: str
+    vin: Optional[str] = None
+    year: Optional[int] = None
+    euro_standard: Optional[str] = None
+    group_name: Optional[str] = "Без групи"
+
+    # 4 незалежних масиви з обладнанням
+    trackers_data: List[TrackerItem] = Field(default_factory=list)
+    tanks_data: List[TankItem] = Field(default_factory=list)
+    drps_data: List[DrpItem] = Field(default_factory=list)
+    additional_equipment: List[str] = Field(default_factory=list)
+
+
+class VehicleCreate(VehicleBase):
+    pass
+
+
+class VehicleUpdate(VehicleBase):
+    pass
+
+
+class VehicleResponse(VehicleBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+//---models/vehicle
+from sqlalchemy import JSON, Column, Integer, String
+from sqlalchemy.orm import relationship  # <-- Додав імпорт для relationship
+
+from app.core.database import Base
+
+
+class Vehicle(Base):
+    __tablename__ = "vehicles"
+
+    # Базова інформація про авто
+    id = Column(Integer, primary_key=True, index=True)
+    internal_id = Column(String, unique=True, index=True, nullable=False)
+    plate = Column(String, unique=True, index=True, nullable=False)
+    make = Column(String, nullable=False)
+    model = Column(String, nullable=False)
+    vin = Column(String, nullable=True)
+    year = Column(Integer, nullable=True)
+    euro_standard = Column(String, nullable=True)
+    group_name = Column(String, default="Без групи")
+
+    # Гнучкі поля для незалежного обліку обладнання
+    trackers_data = Column(JSON, default=list)
+    tanks_data = Column(JSON, default=list)
+    drps_data = Column(JSON, default=list)
+    additional_equipment = Column(JSON, default=list)
+
+    # Зв'язок із сервісними заявками (тікетами)
+    tickets = relationship(
+        "Ticket", back_populates="vehicle", cascade="all, delete-orphan"
+    )
+
+//---endpoint/vehicle
+# Додаємо HTTPException для обробки помилок
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+# Імпортуємо наші розбиті модулі
+from app.api.deps import get_db
+from app.models.vehicle import Vehicle
+from app.schemas.vehicle import VehicleCreate, VehicleResponse
+
+# Створюємо роутер для авто
+router = APIRouter()
+
+
+@router.get("/", response_model=list[VehicleResponse])
+def get_vehicles(db: Session = Depends(get_db)):  # noqa: B008
+    """Отримати список усіх транспортних засобів"""
+    return db.query(Vehicle).all()
+
+
+@router.post("/")
+def create_vehicle(vehicle: VehicleCreate, db: Session = Depends(get_db)):  # noqa: B008
+    db_vehicle = Vehicle(**vehicle.model_dump())
+    db.add(db_vehicle)
+    db.commit()
+    db.refresh(db_vehicle)
+    return db_vehicle
+
+
+# --- ДОДАЄМО ЕНДПОІНТ ОНОВЛЕННЯ ---
+@router.put("/{vehicle_id}", response_model=VehicleResponse)
+def update_vehicle(
+    vehicle_id: int,
+    vehicle: VehicleCreate,
+    db: Session = Depends(get_db),  # noqa: B008
+):
+    # 1. Шукаємо авто в базі
+    db_vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+
+    # 2. Якщо такого немає - віддаємо помилку 404
+    if not db_vehicle:
+        raise HTTPException(status_code=404, detail="Транспортний засіб не знайдено")
+
+    # 3. Оновлюємо всі поля, які прийшли з фронтенду
+    for key, value in vehicle.model_dump().items():
+        setattr(db_vehicle, key, value)
+
+    # 4. Зберігаємо зміни
+    db.commit()
+    db.refresh(db_vehicle)
+
+    return db_vehicle

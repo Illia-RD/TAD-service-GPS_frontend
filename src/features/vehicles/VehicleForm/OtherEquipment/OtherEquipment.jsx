@@ -8,15 +8,18 @@ export const OtherEquipment = ({
   dicts,
   isLoadingDicts,
 }) => {
-  // Розбиваємо рядок з коми на масив об'єктів для react-select
+  // Безпечно розбиваємо рядок з бази на масив об'єктів для react-select
   const currentValues = formData.other_equipment
-    ? formData.other_equipment.split(',').map(item => {
-        const trimmed = item.trim();
-        return { value: trimmed, label: trimmed };
-      })
+    ? formData.other_equipment
+        .split(',')
+        .map(item => {
+          const trimmed = item.trim();
+          return { value: trimmed, label: trimmed };
+        })
+        .filter(item => item.value !== '') // <--- Запобігаємо появі порожніх плашок
     : [];
 
-  // Збираємо обрані теги назад у рядок, розділений комою
+  // Збираємо обрані теги назад у охайний рядок, розділений комою
   const handleChange = selectedOptions => {
     const newValueString = selectedOptions
       ? selectedOptions.map(opt => opt.value).join(', ')
@@ -28,7 +31,7 @@ export const OtherEquipment = ({
     }));
   };
 
-  // Стилі для самого інпуту react-select
+  // Стилі для інпуту react-select
   const selectStyles = {
     control: base => ({
       ...base,
@@ -40,7 +43,7 @@ export const OtherEquipment = ({
     }),
     multiValue: base => ({
       ...base,
-      backgroundColor: '#e2e8f0', // Колір фону плашки (тега)
+      backgroundColor: '#e2e8f0',
       borderRadius: '4px',
     }),
     multiValueLabel: base => ({
@@ -52,7 +55,7 @@ export const OtherEquipment = ({
       ...base,
       color: '#64748b',
       ':hover': {
-        backgroundColor: '#ef4444', // Червоний при наведенні на хрестик
+        backgroundColor: '#ef4444',
         color: 'white',
       },
     }),
@@ -62,20 +65,20 @@ export const OtherEquipment = ({
     <SectionWrapper>
       <SectionTitle>Додаткове обладнання</SectionTitle>
       <div>
-        <Label>Периферія (через пошук або введення)</Label>
+        <Label>Периферія (виберіть зі списку або введіть своє)</Label>
         <CreatableSelect
           isMulti
           isClearable
           isDisabled={isLoadingDicts}
           isLoading={isLoadingDicts}
-          // Якщо довідника ще немає, передаємо порожній масив
+          // Тепер сюди успішно прилетить наш новий унікальний масив з бекенда
           options={dicts?.otherEquipment || []}
           value={currentValues}
           onChange={handleChange}
-          placeholder="Наприклад: CAN-Log, RFID-зчитувач, відеореєстратор, реле блокування..."
+          placeholder="Наприклад: CAN-Log, RFID-зчитувач, відеореєстратор..."
           formatCreateLabel={val => `Додати нове: "${val}"`}
           styles={selectStyles}
-          noOptionsMessage={() => 'Почніть вводити для пошуку...'}
+          noOptionsMessage={() => 'Почніть вводити для пошуку або додавання...'}
         />
       </div>
     </SectionWrapper>

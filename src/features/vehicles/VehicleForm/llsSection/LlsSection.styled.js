@@ -18,35 +18,68 @@ export const SectionTitle = styled.h3`
   margin: 0;
 `;
 
-export const SensorCard = styled.div`
+export const TabsHeader = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+`;
+
+export const TabButton = styled.button`
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid ${({ $active }) => ($active ? '#3b82f6' : '#e2e8f0')};
+  background-color: ${({ $active }) => ($active ? '#eff6ff' : '#ffffff')};
+  color: ${({ $active }) => ($active ? '#2563eb' : '#64748b')};
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: ${({ $active }) => ($active ? '#eff6ff' : '#f8fafc')};
+  }
+`;
+
+export const AddTabButton = styled(TabButton)`
+  background-color: #f1f5f9;
+  color: #3b82f6;
+  border: 1px dashed #94a3b8;
+
+  &:hover {
+    background-color: #e2e8f0;
+  }
+`;
+
+export const TabContent = styled.div`
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 20px;
 `;
 
-export const SensorHeader = styled.div`
+export const TabContentHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
 
   h4 {
     margin: 0;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
-    color: #475569;
+    color: #334155;
   }
 `;
 
 export const FormGroup = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
   margin-bottom: 16px;
+  align-items: start;
 `;
 
 export const Label = styled.label`
@@ -58,7 +91,7 @@ export const Label = styled.label`
 `;
 
 export const Input = styled.input`
-  box-sizing: border-box; /* <--- Додаємо це */
+  box-sizing: border-box;
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #cbd5e1;
@@ -67,6 +100,7 @@ export const Input = styled.input`
   color: #1e293b;
   outline: none;
   background-color: #ffffff;
+  height: 35px; /* Фіксована висота для однакового вигляду */
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
@@ -82,7 +116,7 @@ export const Input = styled.input`
 `;
 
 export const Select = styled.select`
-  box-sizing: border-box; /* <--- Додаємо це */
+  box-sizing: border-box;
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #cbd5e1;
@@ -91,9 +125,11 @@ export const Select = styled.select`
   color: #1e293b;
   outline: none;
   background-color: #ffffff;
+  height: 35px; /* Фіксована висота для однакового вигляду */
 
   &:focus {
     border-color: #3b82f6;
+    box-shadow: 0 0 0 1px #3b82f6;
   }
 `;
 
@@ -127,24 +163,5 @@ export const RemoveButton = styled.button`
 
   &:hover {
     background-color: #fee2e2;
-  }
-`;
-
-// Заглушка для файлу тарування
-export const FileStub = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px dashed #94a3b8;
-  border-radius: 6px;
-  background-color: #ffffff;
-  color: #64748b;
-  font-size: 13px;
-  cursor: not-allowed; /* Поки що неактивно */
-
-  svg {
-    stroke: #94a3b8;
   }
 `;
