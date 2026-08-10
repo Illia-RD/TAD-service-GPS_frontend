@@ -12,9 +12,10 @@ const mapVehicleData = dbData => ({
   year: dbData.year || null,
   euro_standard: dbData.euro_standard || '—',
   group_name: dbData.group_name || 'Без групи',
-  status: dbData.status || 'connected', // <--- Додали статус
-  other_equipment: dbData.other_equipment || '', // <--- Додали інше обладнання (рядок)
-
+  status: dbData.status || 'connected',
+  other_equipment: dbData.other_equipment || '',
+  notes: dbData.notes || '', // <--- ДОДАЛИ ОТРИМАННЯ ПРИМІТКИ З БЕКЕНДА
+  files: dbData.files || [], // <--- ДОДАЛИ ОТРИМАННЯ ФАЙЛІВ
   tanks_data: dbData.tanks_data || [],
   trackers_data: dbData.trackers_data || [],
   drps_data: dbData.drps_data || [],
@@ -23,8 +24,9 @@ const mapVehicleData = dbData => ({
 const preparePayload = formData => ({
   ...formData,
   year: formData.year ? parseInt(formData.year) : null,
-  status: formData.status || 'connected', // <--- Статус летить на бек
-  other_equipment: formData.other_equipment || '', // <--- Рядок летить на бек
+  status: formData.status || 'connected',
+  other_equipment: formData.other_equipment || '',
+  notes: formData.notes || '', // <--- ДОДАЛИ ВІДПРАВКУ ПРИМІТКИ НА БЕКЕНД
 
   tanks_data: (formData.tanks_data || []).map(tank => ({
     id: tank.id !== undefined && tank.id !== null ? String(tank.id) : '',
@@ -93,8 +95,31 @@ export const vehiclesApi = {
       throw error;
     }
   },
+  // ... попередній код ...
+
   getUniqueOtherEquipment: async () => {
     const response = await axios.get(`${BASE_URL}other-equipment/unique`);
     return response.data.map(item => ({ value: item.name, label: item.name }));
+  }, // <--- Не забудь тут кому!
+
+  // --- НОВА ФУНКЦІЯ ДЛЯ ЗАВАНТАЖЕННЯ ФАЙЛІВ ---
+  uploadTareFile: async (vehicleId, file) => {
+    const formData = new FormData();
+    formData.append('file', file); // 'file' - це назва поля, яке чекає FastAPI
+
+    const response = await axios.post(
+      `${BASE_URL}${vehicleId}/upload-tare/`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+  deleteTareFile: async fileId => {
+    const response = await axios.delete(`${BASE_URL}files/${fileId}`);
+    return response.data;
   },
 };

@@ -1,63 +1,103 @@
 import styled from 'styled-components';
 
 export const TableContainer = styled.div`
+  width: 100%;
   overflow-x: auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  /* Щоб скролбар виглядав акуратно */
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
 `;
 
 export const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  font-size: 13px; /* Трохи менший шрифт, щоб більше влізло */
 `;
 
 export const Th = styled.th`
-  background: #f8fafc;
-  color: #64748b;
+  background-color: #f8fafc;
+  color: #475569;
   font-weight: 600;
   padding: 12px 16px;
   border-bottom: 1px solid #e2e8f0;
-  font-size: 14px;
+  white-space: nowrap; /* Заголовки не переносяться */
 `;
 
 export const Td = styled.td`
   padding: 12px 16px;
   border-bottom: 1px solid #e2e8f0;
   color: #1e293b;
-  font-size: 14px;
-  vertical-align: middle;
+  vertical-align: top; /* Вирівнюємо по верху, бо елементів може бути кілька */
 `;
 
-export const Badge = styled.span`
-  background: #e2e8f0;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
-  color: #1e293b;
-  display: inline-block;
-
-  &.primary {
-    background: #dbeafe;
-    color: #1e40af;
+export const Tr = styled.tr`
+  &:hover {
+    background-color: #f8fafc;
+  }
+  &:last-child td {
+    border-bottom: none;
   }
 `;
 
-export const ActionButton = styled.button`
+export const StatusBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
+export const StackedItem = styled.div`
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+export const ExpandBtn = styled.button`
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0 0 0;
+  display: inline-flex;
+  align-items: center;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+export const ActionBtn = styled.button`
   background: #f8fafc;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: #64748b;
-  padding: 0;
   transition: all 0.2s;
 
   &:hover {

@@ -31,6 +31,7 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
     trackers_data: [],
     tanks_data: [],
     drps_data: [],
+    notes: '',
   });
 
   const [dicts, setDicts] = useState({
@@ -162,6 +163,7 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
           dicts={dicts}
           isLoadingDicts={isLoadingDicts}
         />
+
         {/* Секція Примітки */}
         <div style={{ marginTop: '20px', marginBottom: '20px' }}>
           <label
@@ -185,7 +187,7 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
               borderRadius: '6px',
               border: '1px solid #cbd5e1',
               fontSize: '14px',
-              resize: 'vertical', // дозволяє розтягувати поле по висоті
+              resize: 'vertical',
               fontFamily: 'inherit',
               boxSizing: 'border-box',
             }}
