@@ -14,6 +14,7 @@ import {
 } from './VehicleForm.styled';
 
 import { dictionariesApi as api } from '../../../services/dictionariesApi';
+import { vehiclesApi } from '../../../services/vehiclesApi';
 
 export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
   const [formData, setFormData] = useState({
@@ -161,7 +162,35 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
           dicts={dicts}
           isLoadingDicts={isLoadingDicts}
         />
-
+        {/* Секція Примітки */}
+        <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '8px',
+              fontWeight: 'bold',
+              color: '#334155',
+            }}
+          >
+            Примітка
+          </label>
+          <textarea
+            value={formData.notes || ''}
+            onChange={e => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="Будь-яка додаткова інформація по машині (нюанси, клієнтські побажання тощо)..."
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              fontSize: '14px',
+              resize: 'vertical', // дозволяє розтягувати поле по висоті
+              fontFamily: 'inherit',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
         <FormActions>
           <Button type="button" onClick={handleCancel}>
             Скасувати

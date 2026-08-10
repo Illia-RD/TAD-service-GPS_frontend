@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Edit2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import {
   Card,
   CardHeader,
@@ -14,7 +20,6 @@ import {
 export const VehicleCard = ({ vehicle, onEdit }) => {
   const [expanded, setExpanded] = useState(false);
 
-  // Стейти для індексів слайдерів усередині картки
   const [tankIndex, setTankIndex] = useState(0);
   const [trackerIndex, setTrackerIndex] = useState(0);
   const [drpIndex, setDrpIndex] = useState(0);
@@ -30,7 +35,20 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
         .filter(Boolean)
     : [];
 
-  // Стиль для блоку-слайдера
+  // Функція для визначення кольору статусу
+  const getStatusStyles = status => {
+    if (!status) return null;
+    const s = status.toLowerCase();
+    if (s.includes('підключено')) return { bg: '#dcfce7', text: '#166534' }; // Зелений
+    if (s.includes('ремонт')) return { bg: '#ffedd5', text: '#9a3412' }; // Оранжевий
+    if (s.includes('продаж')) return { bg: '#f1f5f9', text: '#475569' }; // Сірий
+    if (s.includes('відключено')) return { bg: '#fee2e2', text: '#991b1b' }; // Червоний
+    if (s.includes('тест')) return { bg: '#dbeafe', text: '#1e40af' }; // Синій
+    return { bg: '#f3f4f6', text: '#374151' }; // Дефолтний, якщо статус нестандартний
+  };
+
+  const statusStyle = getStatusStyles(vehicle.status);
+
   const sliderBoxStyle = {
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
@@ -39,7 +57,6 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
     position: 'relative',
   };
 
-  // Стиль для кнопок стрілочок
   const navBtnStyle = {
     background: 'white',
     border: '1px solid #cbd5e1',
@@ -54,8 +71,23 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
     padding: 0,
   };
 
+  const actionBtnStyle = {
+    background: '#f8fafc',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    width: '28px',
+    height: '28px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    cursor: 'pointer',
+    color: '#64748b',
+    padding: 0,
+  };
+
   return (
-    <Card onClick={() => setExpanded(!expanded)}>
+    <Card>
       <CardHeader>
         <div
           style={{
@@ -85,33 +117,40 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
               #{vehicle.internal_id || '—'} | {vehicle.plate || '—'}
             </Title>
 
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                if (onEdit) onEdit(vehicle);
-              }}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                width: '28px',
-                height: '28px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                cursor: 'pointer',
-                color: '#64748b',
-                padding: 0,
-              }}
-              title="Редагувати"
-            >
-              <Edit2 size={14} />
-            </button>
+            {/* Блок із кнопками керування карткою */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => setExpanded(!expanded)}
+                style={actionBtnStyle}
+                title={expanded ? 'Згорнути' : 'Розгорнути'}
+              >
+                {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+
+              <button
+                onClick={() => onEdit && onEdit(vehicle)}
+                style={actionBtnStyle}
+                title="Редагувати"
+              >
+                <Edit2 size={14} />
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <Badge style={{ background: '#dbeafe', color: '#1e40af' }}>
+            {/* Виводимо статус, якщо він є */}
+            {statusStyle && (
+              <Badge
+                style={{
+                  background: statusStyle.bg,
+                  color: statusStyle.text,
+                  fontWeight: 'bold',
+                }}
+              >
+                ● {vehicle.status}
+              </Badge>
+            )}
+            <Badge style={{ background: '#e0e7ff', color: '#3730a3' }}>
               {vehicle.group_name || 'Група не вказана'}
             </Badge>
             <Badge>
@@ -139,7 +178,208 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
             </DetailsGrid>
           </div>
 
-          {/* Інше обладнання (теги) */}
+          {/* Паливні баки (Слайдер) */}
+          <div>
+            <SectionTitle>Паливні баки ({tanks.length})</SectionTitle>
+            {tanks.length > 0 ? (
+              <div style={sliderBoxStyle}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <strong style={{ color: '#1e293b', fontSize: '13px' }}>
+                    Бак #{tankIndex + 1}{' '}
+                    <span style={{ color: '#94a3b8', fontWeight: 'normal' }}>
+                      ({tankIndex + 1} з {tanks.length})
+                    </span>
+                  </strong>
+                  {tanks.length > 1 && (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() =>
+                          setTankIndex(prev =>
+                            prev > 0 ? prev - 1 : tanks.length - 1
+                          )
+                        }
+                        style={navBtnStyle}
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setTankIndex(prev =>
+                            prev < tanks.length - 1 ? prev + 1 : 0
+                          )
+                        }
+                        style={navBtnStyle}
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div style={{ color: '#475569', fontSize: '13px' }}>
+                  Об'єм:{' '}
+                  <strong>
+                    {tanks[tankIndex].tank_volume
+                      ? `${tanks[tankIndex].tank_volume} л`
+                      : '—'}
+                  </strong>
+                </div>
+              </div>
+            ) : (
+              <Field>
+                <span>Немає доданих баків</span>
+              </Field>
+            )}
+          </div>
+
+          {/* GPS Трекери (Слайдер) */}
+          <div>
+            <SectionTitle>GPS Трекери ({trackers.length})</SectionTitle>
+            {trackers.length > 0 ? (
+              <div style={sliderBoxStyle}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <strong style={{ color: '#1e293b', fontSize: '13px' }}>
+                    {trackers[trackerIndex].tracker_model || 'Трекер'}{' '}
+                    <span style={{ color: '#94a3b8', fontWeight: 'normal' }}>
+                      ({trackerIndex + 1} з {trackers.length})
+                    </span>
+                  </strong>
+                  {trackers.length > 1 && (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() =>
+                          setTrackerIndex(prev =>
+                            prev > 0 ? prev - 1 : trackers.length - 1
+                          )
+                        }
+                        style={navBtnStyle}
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setTrackerIndex(prev =>
+                            prev < trackers.length - 1 ? prev + 1 : 0
+                          )
+                        }
+                        style={navBtnStyle}
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div
+                  style={{
+                    color: '#475569',
+                    fontSize: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                  }}
+                >
+                  <div>
+                    IMEI:{' '}
+                    <strong>
+                      {trackers[trackerIndex].tracker_imei || '—'}
+                    </strong>
+                  </div>
+                  <div>
+                    SIM:{' '}
+                    <strong>{trackers[trackerIndex].sim_number || '—'}</strong>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Field>
+                <span>Немає доданих трекерів</span>
+              </Field>
+            )}
+          </div>
+
+          {/* Датчики рівня палива LLS (Слайдер) */}
+          <div>
+            <SectionTitle>Датчики LLS ({drps.length})</SectionTitle>
+            {drps.length > 0 ? (
+              <div style={sliderBoxStyle}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <strong style={{ color: '#1e293b', fontSize: '13px' }}>
+                    {drps[drpIndex].drp_type || 'Датчик'}{' '}
+                    <span style={{ color: '#94a3b8', fontWeight: 'normal' }}>
+                      ({drpIndex + 1} з {drps.length})
+                    </span>
+                  </strong>
+                  {drps.length > 1 && (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() =>
+                          setDrpIndex(prev =>
+                            prev > 0 ? prev - 1 : drps.length - 1
+                          )
+                        }
+                        style={navBtnStyle}
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setDrpIndex(prev =>
+                            prev < drps.length - 1 ? prev + 1 : 0
+                          )
+                        }
+                        style={navBtnStyle}
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div
+                  style={{
+                    color: '#475569',
+                    fontSize: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                  }}
+                >
+                  <div>
+                    S/N: <strong>{drps[drpIndex].serial_number || '—'}</strong>
+                  </div>
+                  <div>
+                    Прив'язка: Бак{' '}
+                    <strong>#{drps[drpIndex].tank_id || '1'}</strong>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Field>
+                <span>Немає доданих датчиків</span>
+              </Field>
+            )}
+          </div>
+
+          {/* Інше обладнання (тепер внизу) */}
           {otherEquipmentList.length > 0 && (
             <div>
               <SectionTitle>Додаткове обладнання</SectionTitle>
@@ -164,240 +404,25 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
             </div>
           )}
 
-          {/* Паливні баки (Слайдер по одному) */}
-          <div>
-            <SectionTitle>Паливні баки ({tanks.length})</SectionTitle>
-            {tanks.length > 0 ? (
-              <div style={sliderBoxStyle}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '8px',
-                  }}
-                >
-                  <strong style={{ color: '#1e293b', fontSize: '13px' }}>
-                    Бак #{tankIndex + 1}{' '}
-                    <span style={{ color: '#94a3b8', fontWeight: 'normal' }}>
-                      ({tankIndex + 1} з {tanks.length})
-                    </span>
-                  </strong>
-                  {tanks.length > 1 && (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setTankIndex(prev =>
-                            prev > 0 ? prev - 1 : tanks.length - 1
-                          );
-                        }}
-                        style={navBtnStyle}
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setTankIndex(prev =>
-                            prev < tanks.length - 1 ? prev + 1 : 0
-                          );
-                        }}
-                        style={navBtnStyle}
-                      >
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div style={{ color: '#475569', fontSize: '13px' }}>
-                  Об'єм:{' '}
-                  <strong>
-                    {tanks[tankIndex].tank_volume
-                      ? `${tanks[tankIndex].tank_volume} л`
-                      : '—'}
-                  </strong>
-                </div>
-                {tanks[tankIndex].tank_dimensions && (
-                  <div
-                    style={{
-                      color: '#64748b',
-                      fontSize: '12px',
-                      marginTop: '2px',
-                    }}
-                  >
-                    Розміри: {tanks[tankIndex].tank_dimensions}
-                  </div>
-                )}
+          {/* Примітка (в самому кінці) */}
+          {vehicle.notes && (
+            <div>
+              <SectionTitle>Примітка</SectionTitle>
+              <div
+                style={{
+                  background: '#fef3c7', // Жовтуватий фон для виділення
+                  borderLeft: '4px solid #f59e0b',
+                  borderRadius: '4px',
+                  padding: '10px 12px',
+                  fontSize: '13px',
+                  color: '#92400e',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {vehicle.notes}
               </div>
-            ) : (
-              <Field>
-                <span>Немає доданих баків</span>
-              </Field>
-            )}
-          </div>
-
-          {/* GPS Трекери (Слайдер по одному) */}
-          <div>
-            <SectionTitle>GPS Трекери ({trackers.length})</SectionTitle>
-            {trackers.length > 0 ? (
-              <div style={sliderBoxStyle}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '8px',
-                  }}
-                >
-                  <strong style={{ color: '#1e293b', fontSize: '13px' }}>
-                    {trackers[trackerIndex].tracker_model || 'Трекер'}{' '}
-                    <span style={{ color: '#94a3b8', fontWeight: 'normal' }}>
-                      ({trackerIndex + 1} з {trackers.length})
-                    </span>
-                  </strong>
-                  {trackers.length > 1 && (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setTrackerIndex(prev =>
-                            prev > 0 ? prev - 1 : trackers.length - 1
-                          );
-                        }}
-                        style={navBtnStyle}
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setTrackerIndex(prev =>
-                            prev < trackers.length - 1 ? prev + 1 : 0
-                          );
-                        }}
-                        style={navBtnStyle}
-                      >
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div
-                  style={{
-                    color: '#475569',
-                    fontSize: '12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                  }}
-                >
-                  <div>
-                    IMEI:{' '}
-                    <strong>
-                      {trackers[trackerIndex].tracker_imei || '—'}
-                    </strong>
-                  </div>
-                  <div>
-                    S/N:{' '}
-                    <strong>
-                      {trackers[trackerIndex].tracker_serial || '—'}
-                    </strong>
-                  </div>
-                  <div>
-                    SIM:{' '}
-                    <strong>{trackers[trackerIndex].sim_number || '—'}</strong>{' '}
-                    ({trackers[trackerIndex].sim_operator || '—'})
-                  </div>
-                  <div>
-                    Місце:{' '}
-                    <strong>
-                      {trackers[trackerIndex].installation_location || '—'}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <Field>
-                <span>Немає доданих трекерів</span>
-              </Field>
-            )}
-          </div>
-
-          {/* Датчики рівня палива LLS (Слайдер по одному) */}
-          <div>
-            <SectionTitle>Датчики LLS ({drps.length})</SectionTitle>
-            {drps.length > 0 ? (
-              <div style={sliderBoxStyle}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '8px',
-                  }}
-                >
-                  <strong style={{ color: '#1e293b', fontSize: '13px' }}>
-                    {drps[drpIndex].drp_type || 'Датчик'}{' '}
-                    <span style={{ color: '#94a3b8', fontWeight: 'normal' }}>
-                      ({drpIndex + 1} з {drps.length})
-                    </span>
-                  </strong>
-                  {drps.length > 1 && (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setDrpIndex(prev =>
-                            prev > 0 ? prev - 1 : drps.length - 1
-                          );
-                        }}
-                        style={navBtnStyle}
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setDrpIndex(prev =>
-                            prev < drps.length - 1 ? prev + 1 : 0
-                          );
-                        }}
-                        style={navBtnStyle}
-                      >
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div
-                  style={{
-                    color: '#475569',
-                    fontSize: '12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                  }}
-                >
-                  <div>
-                    S/N: <strong>{drps[drpIndex].serial_number || '—'}</strong>
-                  </div>
-                  <div>
-                    Підключення:{' '}
-                    <strong>{drps[drpIndex].connection_type || '—'}</strong>
-                  </div>
-                  <div>
-                    Прив'язка: Бак{' '}
-                    <strong>#{drps[drpIndex].tank_id || '1'}</strong>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <Field>
-                <span>Немає доданих датчиків</span>
-              </Field>
-            )}
-          </div>
+            </div>
+          )}
         </DetailsSection>
       )}
     </Card>
