@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Edit2,
   ChevronLeft,
@@ -12,10 +13,13 @@ import {
   X,
   Trash2,
   RefreshCw,
+  CheckCircle,
+  Wrench,
+  XCircle,
+  Activity,
+  Banknote,
 } from 'lucide-react';
-
 import { vehiclesApi } from '../../../services/vehiclesApi';
-
 import {
   Card,
   CardHeader,
@@ -27,18 +31,15 @@ import {
   Field,
 } from './VehicleCard.styled';
 
-export const VehicleCard = ({ vehicle, onEdit }) => {
+export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
-
   const [tankIndex, setTankIndex] = useState(0);
   const [trackerIndex, setTrackerIndex] = useState(0);
   const [drpIndex, setDrpIndex] = useState(0);
 
-  // --- Стейти для файлів ---
   const [files, setFiles] = useState(vehicle.files || []);
   const [isUploading, setIsUploading] = useState(false);
 
-  // --- Стейти для Модального вікна (Прев'ю) ---
   const [previewFile, setPreviewFile] = useState(null);
   const [previewContent, setPreviewContent] = useState(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -46,7 +47,6 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
   const tanks = vehicle.tanks_data || [];
   const trackers = vehicle.trackers_data || [];
   const drps = vehicle.drps_data || [];
-
   const otherEquipmentList = vehicle.other_equipment
     ? vehicle.other_equipment
         .split(',')
@@ -55,17 +55,54 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
     : [];
 
   const getStatusStyles = status => {
-    if (!status) return null;
-    const s = status.toLowerCase();
-    if (s.includes('підключено')) return { bg: '#dcfce7', text: '#166534' };
-    if (s.includes('ремонт')) return { bg: '#ffedd5', text: '#9a3412' };
-    if (s.includes('продаж')) return { bg: '#f1f5f9', text: '#475569' };
-    if (s.includes('відключено')) return { bg: '#fee2e2', text: '#991b1b' };
-    if (s.includes('тест')) return { bg: '#dbeafe', text: '#1e40af' };
-    return { bg: '#f3f4f6', text: '#374151' };
-  };
+    const defaultStyle = {
+      bg: '#f3f4f6',
+      text: '#374151',
+      icon: <CheckCircle size={14} />,
+    };
+    if (!status) return defaultStyle;
 
+    const s = status.toLowerCase().trim();
+    if (s.includes('відключено') || s.includes('disconnected'))
+      return { bg: '#fee2e2', text: '#991b1b', icon: <XCircle size={14} /> };
+    if (s.includes('підключено') || s.includes('connected'))
+      return {
+        bg: '#dcfce7',
+        text: '#166534',
+        icon: <CheckCircle size={14} />,
+      };
+    if (s.includes('ремонт') || s.includes('repair'))
+      return { bg: '#ffedd5', text: '#9a3412', icon: <Wrench size={14} /> };
+    if (s.includes('продаж') || s.includes('sold'))
+      return { bg: '#d1fae5', text: '#047857', icon: <Banknote size={14} /> };
+    if (s.includes('тест') || s.includes('test'))
+      return { bg: '#dbeafe', text: '#1e40af', icon: <Activity size={14} /> };
+
+    return defaultStyle;
+  };
   const statusStyle = getStatusStyles(vehicle.status);
+
+  const calculateDeformation = (nominal, actual) => {
+    if (
+      nominal === undefined ||
+      actual === undefined ||
+      nominal === '' ||
+      actual === '' ||
+      nominal === null ||
+      actual === null
+    )
+      return null;
+    const nom = parseFloat(nominal);
+    const act = parseFloat(actual);
+    if (isNaN(nom) || isNaN(act) || nom === 0) return null;
+
+    const diff = act - nom;
+    const percent = ((diff / nom) * 100).toFixed(1);
+    return {
+      diff,
+      percent: parseFloat(percent),
+    };
+  };
 
   const sliderBoxStyle = {
     background: '#f8fafc',
@@ -110,20 +147,24 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
     alignItems: 'center',
   };
 
-  // --- ФУНКЦІЇ ДЛЯ ФАЙЛІВ ---
-  const handleFileChange = async e => {
+  const handleFileChange = async (e, specificTankIndex = null) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
-
     try {
       setIsUploading(true);
-      const result = await vehiclesApi.uploadTareFile(vehicle.id, selectedFile);
-      setFiles(prev => [...prev, result]);
+      const result = await vehiclesApi.uploadTareFile(
+        vehicle.id,
+        selectedFile,
+        specificTankIndex
+      );
+      if (!vehicle.files) vehicle.files = [];
+      vehicle.files.push(result);
+      setFiles([...vehicle.files]);
     } catch (error) {
       alert('Помилка при завантаженні файлу.');
     } finally {
       setIsUploading(false);
-      e.target.value = null;
+      if (e.target) e.target.value = null;
     }
   };
 
@@ -131,73 +172,101 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
     if (!window.confirm('Ви впевнені, що хочете видалити цей файл?')) return;
     try {
       await vehiclesApi.deleteTareFile(fileId);
-      setFiles(prev => prev.filter(f => f.id !== fileId));
+      if (vehicle.files)
+        vehicle.files = vehicle.files.filter(f => f.id !== fileId);
+      setFiles([...(vehicle.files || [])]);
     } catch (err) {
       alert('Помилка видалення файлу');
     }
   };
 
-  const handleReplaceFile = async (oldFileId, e) => {
+  const handleReplaceFile = async (oldFileId, tankIdx, e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
       setIsUploading(true);
-      // 1. Завантажуємо новий
-      const newFileResult = await vehiclesApi.uploadTareFile(vehicle.id, file);
-      // 2. Видаляємо старий
+      const newFileResult = await vehiclesApi.uploadTareFile(
+        vehicle.id,
+        file,
+        tankIdx
+      );
       await vehiclesApi.deleteTareFile(oldFileId);
-      // 3. Оновлюємо список
-      setFiles(prev => {
-        const updated = prev.filter(f => f.id !== oldFileId);
-        return [...updated, newFileResult];
-      });
+      if (vehicle.files) {
+        vehicle.files = vehicle.files.filter(f => f.id !== oldFileId);
+        vehicle.files.push(newFileResult);
+      }
+      setFiles([...(vehicle.files || [])]);
     } catch (err) {
       alert('Помилка заміни файлу');
     } finally {
       setIsUploading(false);
-      e.target.value = null;
+      if (e.target) e.target.value = null;
     }
   };
 
-  // --- ФУНКЦІЇ ВІДКРИТТЯ ПРЕВ'Ю ---
   const handlePreview = async file => {
     setPreviewFile(file);
     const ext = file.file_name.split('.').pop().toLowerCase();
+    const fileUrl = `http://127.0.0.1:8000/${file.file_path}`;
 
     if (ext === 'xls' || ext === 'xlsx') {
-      setPreviewContent('EXCEL_FORMAT');
+      try {
+        setIsPreviewLoading(true);
+        const res = await fetch(fileUrl);
+        const arrayBuffer = await res.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const htmlData = XLSX.utils.sheet_to_html(worksheet, { header: '' });
+        setPreviewContent({ type: 'excel', html: htmlData });
+      } catch (err) {
+        setPreviewContent({ type: 'error' });
+      } finally {
+        setIsPreviewLoading(false);
+      }
       return;
     }
 
     try {
       setIsPreviewLoading(true);
-      const fileUrl = `http://127.0.0.1:8000/${file.file_path}`;
       const response = await fetch(fileUrl);
       const text = await response.text();
-      setPreviewContent(text);
+      setPreviewContent({ type: 'text', data: text });
     } catch (error) {
-      setPreviewContent('ERROR');
+      setPreviewContent({ type: 'error' });
     } finally {
       setIsPreviewLoading(false);
     }
   };
 
   const renderPreviewContent = () => {
-    if (isPreviewLoading) return <div>Завантаження вмісту...</div>;
-    if (previewContent === 'EXCEL_FORMAT')
+    if (isPreviewLoading)
       return (
-        <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
-          Формат Excel не підтримує онлайн-перегляд. Будь ласка, завантажте
-          файл.
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          Завантаження вмісту...
         </div>
       );
-    if (previewContent === 'ERROR')
-      return <div style={{ color: 'red' }}>Не вдалося прочитати файл.</div>;
+    if (!previewContent || previewContent.type === 'error')
+      return (
+        <div style={{ color: 'red', textAlign: 'center' }}>
+          Не вдалося прочитати файл.
+        </div>
+      );
+
+    if (previewContent.type === 'excel') {
+      return (
+        <div
+          dangerouslySetInnerHTML={{ __html: previewContent.html }}
+          style={{ width: '100%', overflowX: 'auto', fontSize: '13px' }}
+        />
+      );
+    }
 
     const isCsv = previewFile?.file_name.toLowerCase().endsWith('.csv');
+    const textData = previewContent.data;
 
-    if (isCsv && previewContent) {
-      const rows = previewContent.split('\n').filter(row => row.trim() !== '');
+    if (isCsv && textData) {
+      const rows = textData.split('\n').filter(row => row.trim() !== '');
       return (
         <table
           style={{
@@ -229,7 +298,6 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
         </table>
       );
     }
-
     return (
       <pre
         style={{
@@ -240,7 +308,7 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
           borderRadius: '4px',
         }}
       >
-        {previewContent}
+        {textData}
       </pre>
     );
   };
@@ -276,7 +344,6 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
               >
                 #{vehicle.internal_id || '—'} | {vehicle.plate || '—'}
               </Title>
-
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   onClick={() => setExpanded(!expanded)}
@@ -296,6 +363,13 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
                 >
                   <Edit2 size={14} />
                 </button>
+                <button
+                  onClick={() => onDelete && onDelete(vehicle.id)}
+                  style={{ ...actionBtnStyle, color: '#ef4444' }}
+                  title="Видалити в корзину"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
 
@@ -306,9 +380,12 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
                     background: statusStyle.bg,
                     color: statusStyle.text,
                     fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                 >
-                  ● {vehicle.status}
+                  {statusStyle.icon} {vehicle.status}
                 </Badge>
               )}
               <Badge style={{ background: '#e0e7ff', color: '#3730a3' }}>
@@ -382,13 +459,190 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
                       </div>
                     )}
                   </div>
-                  <div style={{ color: '#475569', fontSize: '13px' }}>
-                    Об'єм:{' '}
-                    <strong>
-                      {tanks[tankIndex].tank_volume
-                        ? `${tanks[tankIndex].tank_volume} л`
-                        : '—'}
-                    </strong>
+
+                  <div
+                    style={{
+                      color: '#475569',
+                      fontSize: '13px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div>
+                      Паспортний об'єм:{' '}
+                      <strong>{tanks[tankIndex].tank_volume ?? '—'} л</strong>
+                    </div>
+                    <div>
+                      Фактичний об'єм:{' '}
+                      <strong>{tanks[tankIndex].actual_volume ?? '—'} л</strong>
+                    </div>
+                    {tanks[tankIndex].tank_dimensions && (
+                      <div>
+                        Габарити:{' '}
+                        <strong>{tanks[tankIndex].tank_dimensions}</strong>
+                      </div>
+                    )}
+
+                    {(() => {
+                      const def = calculateDeformation(
+                        tanks[tankIndex].tank_volume,
+                        tanks[tankIndex].actual_volume
+                      );
+                      if (!def) return null;
+                      const isPlus = def.diff > 0;
+                      const color = isPlus ? '#2563eb' : '#dc2626';
+                      return (
+                        <div
+                          style={{
+                            marginTop: '4px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color,
+                          }}
+                        >
+                          Деформація: {isPlus ? `+${def.diff}` : def.diff} л (
+                          {isPlus ? `+${def.percent}%` : `${def.percent}%`})
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Файли для конкретного баку */}
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      borderTop: '1px solid #e2e8f0',
+                      paddingTop: '8px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '6px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#475569',
+                        }}
+                      >
+                        Файли бака #{tankIndex + 1}:
+                      </span>
+                      <label
+                        style={{
+                          cursor: isUploading ? 'wait' : 'pointer',
+                          color: '#2563eb',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: '500',
+                        }}
+                      >
+                        <input
+                          type="file"
+                          style={{ display: 'none' }}
+                          onChange={e => handleFileChange(e, tankIndex)}
+                          disabled={isUploading}
+                          accept=".csv, .txt, .xls, .xlsx"
+                        />
+                        <Upload size={12} /> Додати файл
+                      </label>
+                    </div>
+
+                    {files.filter(f => f.tank_index === tankIndex).length >
+                    0 ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        {files
+                          .filter(f => f.tank_index === tankIndex)
+                          .map(f => {
+                            const fileUrl = `http://127.0.0.1:8000/${f.file_path}`;
+                            return (
+                              <div
+                                key={f.id}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  background: 'white',
+                                  padding: '6px 8px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #cbd5e1',
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    maxWidth: '140px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title={f.file_name}
+                                >
+                                  {f.file_name}
+                                </span>
+                                <div style={{ display: 'flex', gap: '2px' }}>
+                                  <button
+                                    onClick={() => handlePreview(f)}
+                                    style={iconBtnStyle}
+                                    title="Переглянути"
+                                  >
+                                    <Eye size={14} color="#3b82f6" />
+                                  </button>
+                                  <label style={iconBtnStyle} title="Замінити">
+                                    <input
+                                      type="file"
+                                      hidden
+                                      onChange={e =>
+                                        handleReplaceFile(f.id, tankIndex, e)
+                                      }
+                                      accept=".csv, .txt, .xls, .xlsx"
+                                    />
+                                    <RefreshCw size={14} color="#10b981" />
+                                  </label>
+                                  <a
+                                    href={fileUrl}
+                                    download={f.file_name}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{
+                                      ...iconBtnStyle,
+                                      color: '#64748b',
+                                    }}
+                                    title="Скачати"
+                                  >
+                                    <Download size={14} />
+                                  </a>
+                                  <button
+                                    onClick={() => handleDeleteFile(f.id)}
+                                    style={iconBtnStyle}
+                                    title="Видалити"
+                                  >
+                                    <Trash2 size={14} color="#ef4444" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        Немає файлів для цього бака
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -472,7 +726,7 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
               )}
             </div>
 
-            {/* Датчики рівня палива LLS */}
+            {/* Датчики LLS (з висотою і типом підключення) */}
             <div>
               <SectionTitle>Датчики LLS ({drps.length})</SectionTitle>
               {drps.length > 0 ? (
@@ -530,6 +784,18 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
                       <strong>{drps[drpIndex].serial_number || '—'}</strong>
                     </div>
                     <div>
+                      Висота:{' '}
+                      <strong>
+                        {drps[drpIndex].drp_height
+                          ? `${drps[drpIndex].drp_height} мм`
+                          : '—'}
+                      </strong>
+                    </div>
+                    <div>
+                      Підключення:{' '}
+                      <strong>{drps[drpIndex].connection_type || '—'}</strong>
+                    </div>
+                    <div>
                       Прив'язка: Бак{' '}
                       <strong>#{drps[drpIndex].tank_id || '1'}</strong>
                     </div>
@@ -542,7 +808,7 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
               )}
             </div>
 
-            {/* --- СЕКЦІЯ ФАЙЛІВ ТАРУВАННЯ --- */}
+            {/* Загальні файли */}
             <div>
               <div
                 style={{
@@ -553,7 +819,13 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
                 }}
               >
                 <SectionTitle style={{ margin: 0 }}>
-                  Тарувальні таблиці ({files.length})
+                  Загальні файли (
+                  {
+                    files.filter(
+                      f => f.tank_index === null || f.tank_index === undefined
+                    ).length
+                  }
+                  )
                 </SectionTitle>
                 <label
                   style={{
@@ -569,16 +841,17 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
                   <input
                     type="file"
                     style={{ display: 'none' }}
-                    onChange={handleFileChange}
+                    onChange={e => handleFileChange(e, null)}
                     disabled={isUploading}
                     accept=".csv, .txt, .xls, .xlsx"
                   />
-                  <Upload size={14} />
-                  {isUploading ? 'Завантаження...' : 'Додати файл'}
+                  <Upload size={14} /> Додати файл
                 </label>
               </div>
 
-              {files.length > 0 ? (
+              {files.filter(
+                f => f.tank_index === null || f.tank_index === undefined
+              ).length > 0 ? (
                 <div
                   style={{
                     display: 'flex',
@@ -586,99 +859,99 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
                     gap: '6px',
                   }}
                 >
-                  {files.map(f => {
-                    const fileUrl = `http://127.0.0.1:8000/${f.file_path}`;
-                    return (
-                      <div
-                        key={f.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          background: '#f8fafc',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #e2e8f0',
-                        }}
-                      >
+                  {files
+                    .filter(
+                      f => f.tank_index === null || f.tank_index === undefined
+                    )
+                    .map(f => {
+                      const fileUrl = `http://127.0.0.1:8000/${f.file_path}`;
+                      return (
                         <div
+                          key={f.id}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
-                            color: '#334155',
-                            fontSize: '13px',
-                            overflow: 'hidden',
+                            justifyContent: 'space-between',
+                            background: '#f8fafc',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #e2e8f0',
                           }}
                         >
-                          <Paperclip
-                            size={14}
-                            color="#64748b"
-                            style={{ flexShrink: 0 }}
-                          />
-                          <span
+                          <div
                             style={{
-                              fontWeight: '500',
-                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              color: '#334155',
+                              fontSize: '13px',
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis',
                             }}
                           >
-                            {f.file_name}
-                          </span>
-                        </div>
-
-                        {/* Панель інструментів файлу */}
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <button
-                            onClick={() => handlePreview(f)}
-                            style={iconBtnStyle}
-                            title="Переглянути"
-                          >
-                            <Eye size={16} color="#3b82f6" />
-                          </button>
-
-                          <label style={iconBtnStyle} title="Замінити файл">
-                            <input
-                              type="file"
-                              hidden
-                              onChange={e => handleReplaceFile(f.id, e)}
-                              accept=".csv, .txt, .xls, .xlsx"
+                            <Paperclip
+                              size={14}
+                              color="#64748b"
+                              style={{ flexShrink: 0 }}
                             />
-                            <RefreshCw size={16} color="#10b981" />
-                          </label>
-
-                          <a
-                            href={fileUrl}
-                            download={f.file_name}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ ...iconBtnStyle, color: '#64748b' }}
-                            title="Завантажити"
-                          >
-                            <Download size={16} />
-                          </a>
-
-                          <button
-                            onClick={() => handleDeleteFile(f.id)}
-                            style={iconBtnStyle}
-                            title="Видалити"
-                          >
-                            <Trash2 size={16} color="#ef4444" />
-                          </button>
+                            <span
+                              style={{
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                              title={f.file_name}
+                            >
+                              {f.file_name}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={() => handlePreview(f)}
+                              style={iconBtnStyle}
+                              title="Переглянути"
+                            >
+                              <Eye size={16} color="#3b82f6" />
+                            </button>
+                            <label style={iconBtnStyle} title="Замінити">
+                              <input
+                                type="file"
+                                hidden
+                                onChange={e => handleReplaceFile(f.id, null, e)}
+                                accept=".csv, .txt, .xls, .xlsx"
+                              />
+                              <RefreshCw size={16} color="#10b981" />
+                            </label>
+                            <a
+                              href={fileUrl}
+                              download={f.file_name}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ ...iconBtnStyle, color: '#64748b' }}
+                              title="Скачати"
+                            >
+                              <Download size={16} />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteFile(f.id)}
+                              style={iconBtnStyle}
+                              title="Видалити"
+                            >
+                              <Trash2 size={16} color="#ef4444" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               ) : (
                 <Field>
-                  <span>Немає завантажених таблиць</span>
+                  <span>Немає загальних файлів</span>
                 </Field>
               )}
             </div>
 
-            {/* Інше обладнання */}
+            {/* Додаткове обладнання */}
             {otherEquipmentList.length > 0 && (
               <div style={{ marginTop: '16px' }}>
                 <SectionTitle>Додаткове обладнання</SectionTitle>
@@ -736,7 +1009,7 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
         )}
       </Card>
 
-      {/* --- МОДАЛЬНЕ ВІКНО ПРЕВ'Ю ФАЙЛУ --- */}
+      {/* Модалка прев'ю з підтримкою Excel */}
       {previewFile && (
         <div
           style={{
@@ -758,7 +1031,7 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
               background: 'white',
               borderRadius: '8px',
               width: '100%',
-              maxWidth: '600px',
+              maxWidth: '750px',
               maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',
@@ -797,11 +1070,9 @@ export const VehicleCard = ({ vehicle, onEdit }) => {
                 <X size={20} />
               </button>
             </div>
-
             <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
               {renderPreviewContent()}
             </div>
-
             <div
               style={{
                 padding: '16px 20px',

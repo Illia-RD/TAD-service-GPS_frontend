@@ -17,7 +17,6 @@ export const VehicleList = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
 
-  // Стан для відстеження, чи ввів користувач якісь дані у форму
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const [viewMode, setViewMode] = useState(() => {
@@ -37,35 +36,46 @@ export const VehicleList = () => {
 
   const handleEdit = vehicle => {
     setEditingVehicle(vehicle);
-    setIsFormDirty(false); // При відкритті форма чиста
+    setIsFormDirty(false);
     setIsModalOpen(true);
   };
 
-  // Розумне закриття модалки
+  // --- НОВА ФУНКЦІЯ: ВИДАЛЕННЯ АВТО ---
+  const handleDeleteVehicle = async id => {
+    const confirmDelete = window.confirm(
+      'Ви впевнені, що хочете видалити цей автомобіль? Він буде переміщений у корзину.'
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await vehiclesApi.deleteVehicle(id);
+      // Після успішного видалення просто перевантажуємо список
+      loadVehicles();
+    } catch (error) {
+      console.error('Помилка при видаленні авто:', error);
+      alert('Виникла помилка при видаленні. Перевірте консоль.');
+    }
+  };
+
   const handleCloseModal = () => {
     if (isFormDirty) {
       const confirmClose = window.confirm(
         'У вас є незбережені дані. Ви впевнені, що хочете закрити форму? Всі зміни буде втрачено.'
       );
-      if (!confirmClose) return; // Якщо користувач натиснув "Скасувати", не закриваємо
+      if (!confirmClose) return;
     }
     setIsModalOpen(false);
     setEditingVehicle(null);
     setIsFormDirty(false);
   };
 
-  // НОВА ФУНКЦІЯ: Збереження форми на бекенд
   const handleSaveVehicle = async formData => {
     try {
       if (editingVehicle?.id) {
-        // Якщо є ID, значить це редагування
         await vehiclesApi.update(editingVehicle.id, formData);
       } else {
-        // Якщо ID немає, створюємо нову машину
         await vehiclesApi.create(formData);
       }
-
-      // Якщо все пройшло успішно: оновлюємо список і закриваємо форму
       loadVehicles();
       setIsFormDirty(false);
       setIsModalOpen(false);
@@ -89,27 +99,27 @@ export const VehicleList = () => {
           <Plus size={20} /> Створити
         </CreateButton>
 
-        <ViewModeButton
-          $active={viewMode === 'card'}
-          onClick={() => setViewMode('card')}
-        >
-          <LayoutGrid size={20} />
-        </ViewModeButton>
-        <ViewModeButton
-          $active={viewMode === 'table'}
-          onClick={() => setViewMode('table')}
-        >
-          <ListIcon size={20} />
-        </ViewModeButton>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <ViewModeButton
+            $active={viewMode === 'card'}
+            onClick={() => setViewMode('card')}
+          >
+            <LayoutGrid size={20} />
+          </ViewModeButton>
+          <ViewModeButton
+            $active={viewMode === 'table'}
+            onClick={() => setViewMode('table')}
+          >
+            <ListIcon size={20} />
+          </ViewModeButton>
+        </div>
       </ControlsContainer>
 
       <VehicleModal isOpen={isModalOpen} onClose={handleCloseModal}>
         <VehicleForm
           initialData={editingVehicle}
-          onSubmit={handleSaveVehicle} /* Передаємо нашу нову функцію */
-          onCancelEdit={
-            handleCloseModal
-          } /* Використовуємо onCancelEdit, як домовлялися */
+          onSubmit={handleSaveVehicle}
+          onCancelEdit={handleCloseModal}
           onFormDirty={status => setIsFormDirty(status)}
         />
       </VehicleModal>
@@ -117,11 +127,20 @@ export const VehicleList = () => {
       {viewMode === 'card' ? (
         <ListWrapper>
           {vehicles.map(v => (
-            <VehicleCard key={v.id} vehicle={v} onEdit={handleEdit} />
+            <VehicleCard
+              key={v.id}
+              vehicle={v}
+              onEdit={handleEdit}
+              onDelete={handleDeleteVehicle} /* Прокидаємо функцію */
+            />
           ))}
         </ListWrapper>
       ) : (
-        <VehicleTable vehicles={vehicles} onEdit={handleEdit} />
+        <VehicleTable
+          vehicles={vehicles}
+          onEdit={handleEdit}
+          onDelete={handleDeleteVehicle} /* Прокидаємо функцію */
+        />
       )}
     </>
   );

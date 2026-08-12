@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Edit2,
-  ChevronDown,
-  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   Download,
   Upload,
@@ -10,10 +11,14 @@ import {
   RefreshCw,
   Paperclip,
   X,
+  CheckCircle,
+  Wrench,
+  XCircle,
+  Activity,
+  Banknote,
 } from 'lucide-react';
-// УВАГА: Підправ шлях до API під свою структуру
-import { vehiclesApi } from '../../../services/vehiclesApi';
 
+import { vehiclesApi } from '../../../services/vehiclesApi';
 import {
   TableContainer,
   Table,
@@ -23,54 +28,110 @@ import {
   StatusBadge,
   ActionBtn,
   StackedItem,
-  ExpandBtn,
 } from './VehicleTable.styled';
 
-export const VehicleTable = ({ vehicles, onEdit }) => {
-  const [expandedRows, setExpandedRows] = useState({});
-
-  // Локальний стейт файлів (щоб таблиця оновлювалась миттєво без перезавантаження сторінки)
+export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
   const [localFiles, setLocalFiles] = useState({});
   const [isUploading, setIsUploading] = useState({});
 
-  // Стейти для Модального вікна (Прев'ю)
+  // Стейт для слайдерів у таблиці
+  const [tankIndices, setTankIndices] = useState({});
+  const [trackerIndices, setTrackerIndices] = useState({});
+  const [drpIndices, setDrpIndices] = useState({});
+
   const [previewFile, setPreviewFile] = useState(null);
   const [previewContent, setPreviewContent] = useState(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
-  const toggleRow = id => {
-    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  const getIndex = (indicesObj, id) => indicesObj[id] || 0;
+  const handleSlide = (indicesObj, setIndicesObj, id, direction, max) => {
+    const current = indicesObj[id] || 0;
+    let next = current + direction;
+    if (next < 0) next = max - 1;
+    if (next >= max) next = 0;
+    setIndicesObj(prev => ({ ...prev, [id]: next }));
+  };
+
+  // --- ФУНКЦІЯ РОЗРАХУНОК ДЕФОРМАЦІЇ (+/-) ---
+  const calculateDeformation = (nominal, actual) => {
+    if (
+      nominal === undefined ||
+      actual === undefined ||
+      nominal === '' ||
+      actual === '' ||
+      nominal === null ||
+      actual === null
+    )
+      return null;
+    const nom = parseFloat(nominal);
+    const act = parseFloat(actual);
+    if (isNaN(nom) || isNaN(act) || nom === 0) return null;
+
+    const diff = act - nom;
+    const percent = ((diff / nom) * 100).toFixed(1);
+    return {
+      diff,
+      percent: parseFloat(percent),
+    };
   };
 
   const getStatusStyles = status => {
-    if (!status) return { bg: '#f3f4f6', text: '#374151' };
-    const s = status.toLowerCase();
-    if (s.includes('підключено')) return { bg: '#dcfce7', text: '#166534' };
-    if (s.includes('ремонт')) return { bg: '#ffedd5', text: '#9a3412' };
-    if (s.includes('продаж')) return { bg: '#f1f5f9', text: '#475569' };
-    if (s.includes('відключено')) return { bg: '#fee2e2', text: '#991b1b' };
-    return { bg: '#f3f4f6', text: '#374151' };
+    const defaultStyle = {
+      bg: '#f3f4f6',
+      text: '#374151',
+      icon: <CheckCircle size={14} />,
+    };
+    if (!status) return defaultStyle;
+
+    const s = status.toLowerCase().trim();
+    if (s.includes('відключено') || s.includes('disconnected'))
+      return { bg: '#fee2e2', text: '#991b1b', icon: <XCircle size={14} /> };
+    if (s.includes('підключено') || s.includes('connected'))
+      return {
+        bg: '#dcfce7',
+        text: '#166534',
+        icon: <CheckCircle size={14} />,
+      };
+    if (s.includes('ремонт') || s.includes('repair'))
+      return { bg: '#ffedd5', text: '#9a3412', icon: <Wrench size={14} /> };
+    if (s.includes('продаж') || s.includes('sold'))
+      return { bg: '#d1fae5', text: '#047857', icon: <Banknote size={14} /> };
+    if (s.includes('тест') || s.includes('test'))
+      return { bg: '#dbeafe', text: '#1e40af', icon: <Activity size={14} /> };
+
+    return defaultStyle;
   };
 
-  // --- ФУНКЦІЇ ДЛЯ ФАЙЛІВ ---
-  const handleUploadFile = async (vehicleId, e) => {
+  const handleUploadFile = async (vehicleId, tankIndex, e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      setIsUploading(prev => ({ ...prev, [vehicleId]: true }));
-      const result = await vehiclesApi.uploadTareFile(vehicleId, file);
-      setLocalFiles(prev => {
-        const current =
-          prev[vehicleId] ||
-          vehicles.find(v => v.id === vehicleId)?.files ||
-          [];
-        return { ...prev, [vehicleId]: [...current, result] };
-      });
+      setIsUploading(prev => ({
+        ...prev,
+        [`${vehicleId}_${tankIndex}`]: true,
+      }));
+      const result = await vehiclesApi.uploadTareFile(
+        vehicleId,
+        file,
+        tankIndex
+      );
+      const vehicle = vehicles.find(v => v.id === vehicleId);
+      if (vehicle) {
+        if (!vehicle.files) vehicle.files = [];
+        vehicle.files.push(result);
+      }
+      setLocalFiles(prev => ({
+        ...prev,
+        [vehicleId]: [...(vehicle?.files || [])],
+      }));
     } catch (err) {
       alert('Помилка завантаження файлу');
     } finally {
-      setIsUploading(prev => ({ ...prev, [vehicleId]: false }));
-      e.target.value = null;
+      setIsUploading(prev => ({
+        ...prev,
+        [`${vehicleId}_${tankIndex}`]: false,
+      }));
+      if (e.target) e.target.value = null;
     }
   };
 
@@ -78,83 +139,115 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
     if (!window.confirm('Ви впевнені, що хочете видалити цей файл?')) return;
     try {
       await vehiclesApi.deleteTareFile(fileId);
-      setLocalFiles(prev => {
-        const current =
-          prev[vehicleId] ||
-          vehicles.find(v => v.id === vehicleId)?.files ||
-          [];
-        return { ...prev, [vehicleId]: current.filter(f => f.id !== fileId) };
-      });
+      const vehicle = vehicles.find(v => v.id === vehicleId);
+      if (vehicle && vehicle.files)
+        vehicle.files = vehicle.files.filter(f => f.id !== fileId);
+      setLocalFiles(prev => ({
+        ...prev,
+        [vehicleId]: [...(vehicle?.files || [])],
+      }));
     } catch (err) {
       alert('Помилка видалення файлу');
     }
   };
 
-  const handleReplaceFile = async (vehicleId, oldFileId, e) => {
+  const handleReplaceFile = async (vehicleId, oldFileId, tankIndex, e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      setIsUploading(prev => ({ ...prev, [vehicleId]: true }));
-      // 1. Завантажуємо новий
-      const newFileResult = await vehiclesApi.uploadTareFile(vehicleId, file);
-      // 2. Видаляємо старий
+      setIsUploading(prev => ({
+        ...prev,
+        [`${vehicleId}_${tankIndex}`]: true,
+      }));
+      const newFileResult = await vehiclesApi.uploadTareFile(
+        vehicleId,
+        file,
+        tankIndex
+      );
       await vehiclesApi.deleteTareFile(oldFileId);
-
-      // 3. Оновлюємо стейт
-      setLocalFiles(prev => {
-        const current =
-          prev[vehicleId] ||
-          vehicles.find(v => v.id === vehicleId)?.files ||
-          [];
-        const updated = current.filter(f => f.id !== oldFileId);
-        updated.push(newFileResult);
-        return { ...prev, [vehicleId]: updated };
-      });
+      const vehicle = vehicles.find(v => v.id === vehicleId);
+      if (vehicle && vehicle.files) {
+        vehicle.files = vehicle.files.filter(f => f.id !== oldFileId);
+        vehicle.files.push(newFileResult);
+      }
+      setLocalFiles(prev => ({
+        ...prev,
+        [vehicleId]: [...(vehicle?.files || [])],
+      }));
     } catch (err) {
       alert('Помилка заміни файлу');
     } finally {
-      setIsUploading(prev => ({ ...prev, [vehicleId]: false }));
-      e.target.value = null;
+      setIsUploading(prev => ({
+        ...prev,
+        [`${vehicleId}_${tankIndex}`]: false,
+      }));
+      if (e.target) e.target.value = null;
     }
   };
 
-  // --- ФУНКЦІЇ ПРЕВ'Ю ---
   const handlePreview = async file => {
     setPreviewFile(file);
     const ext = file.file_name.split('.').pop().toLowerCase();
+    const fileUrl = `http://127.0.0.1:8000/${file.file_path}`;
 
     if (ext === 'xls' || ext === 'xlsx') {
-      setPreviewContent('EXCEL_FORMAT');
+      try {
+        setIsPreviewLoading(true);
+        const res = await fetch(fileUrl);
+        const arrayBuffer = await res.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const htmlData = XLSX.utils.sheet_to_html(worksheet, { header: '' });
+        setPreviewContent({ type: 'excel', html: htmlData });
+      } catch (err) {
+        setPreviewContent({ type: 'error' });
+      } finally {
+        setIsPreviewLoading(false);
+      }
       return;
     }
 
     try {
       setIsPreviewLoading(true);
-      const response = await fetch(`http://127.0.0.1:8000/${file.file_path}`);
+      const response = await fetch(fileUrl);
       const text = await response.text();
-      setPreviewContent(text);
+      setPreviewContent({ type: 'text', data: text });
     } catch (error) {
-      setPreviewContent('ERROR');
+      setPreviewContent({ type: 'error' });
     } finally {
       setIsPreviewLoading(false);
     }
   };
 
   const renderPreviewContent = () => {
-    if (isPreviewLoading) return <div>Завантаження вмісту...</div>;
-    if (previewContent === 'EXCEL_FORMAT')
+    if (isPreviewLoading)
       return (
-        <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
-          Формат Excel не підтримує онлайн-перегляд. Будь ласка, завантажте
-          файл.
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          Завантаження вмісту...
         </div>
       );
-    if (previewContent === 'ERROR')
-      return <div style={{ color: 'red' }}>Не вдалося прочитати файл.</div>;
+    if (!previewContent || previewContent.type === 'error')
+      return (
+        <div style={{ color: 'red', textAlign: 'center' }}>
+          Не вдалося прочитати файл.
+        </div>
+      );
+
+    if (previewContent.type === 'excel') {
+      return (
+        <div
+          dangerouslySetInnerHTML={{ __html: previewContent.html }}
+          style={{ width: '100%', overflowX: 'auto', fontSize: '13px' }}
+        />
+      );
+    }
 
     const isCsv = previewFile?.file_name.toLowerCase().endsWith('.csv');
-    if (isCsv && previewContent) {
-      const rows = previewContent.split('\n').filter(row => row.trim() !== '');
+    const textData = previewContent.data;
+
+    if (isCsv && textData) {
+      const rows = textData.split('\n').filter(row => row.trim() !== '');
       return (
         <table
           style={{
@@ -196,36 +289,8 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
           borderRadius: '4px',
         }}
       >
-        {previewContent}
+        {textData}
       </pre>
-    );
-  };
-
-  const renderList = (items, vehicleId, renderItemFn) => {
-    if (!items || items.length === 0)
-      return <span style={{ color: '#94a3b8' }}>—</span>;
-    const isExpanded = expandedRows[vehicleId];
-    const visibleItems = isExpanded ? items : items.slice(0, 2);
-    const hiddenCount = items.length - 2;
-
-    return (
-      <div>
-        {visibleItems.map((item, index) => renderItemFn(item, index))}
-        {hiddenCount > 0 && (
-          <ExpandBtn onClick={() => toggleRow(vehicleId)}>
-            {isExpanded ? (
-              <>
-                Згорнути <ChevronUp size={14} style={{ marginLeft: '2px' }} />
-              </>
-            ) : (
-              <>
-                Ще ({hiddenCount}){' '}
-                <ChevronDown size={14} style={{ marginLeft: '2px' }} />
-              </>
-            )}
-          </ExpandBtn>
-        )}
-      </div>
     );
   };
 
@@ -235,7 +300,6 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
     );
   }
 
-  // Стиль для маленьких іконок дій над файлом
   const iconBtnStyle = {
     background: 'none',
     border: 'none',
@@ -245,36 +309,64 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
     alignItems: 'center',
   };
 
+  const tableNavBtnStyle = {
+    background: 'white',
+    border: '1px solid #cbd5e1',
+    borderRadius: '3px',
+    width: '20px',
+    height: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    color: '#475569',
+    padding: 0,
+  };
+
   return (
     <>
       <TableContainer>
         <Table>
           <thead>
             <tr>
-              <Th style={{ minWidth: '150px' }}>Ідентифікація</Th>
+              <Th className="sticky-left" style={{ minWidth: '150px' }}>
+                Ідентифікація
+              </Th>
               <Th style={{ minWidth: '130px' }}>Статус / Група</Th>
-              <Th style={{ minWidth: '220px' }}>GPS Трекери</Th>
-              <Th style={{ minWidth: '170px' }}>Паливні баки</Th>
-              <Th style={{ minWidth: '190px' }}>Датчики LLS</Th>
+              <Th style={{ minWidth: '200px' }}>GPS Трекери</Th>
+              <Th style={{ minWidth: '220px' }}>Паливні баки та файли</Th>
+              <Th style={{ minWidth: '200px' }}>Датчики LLS</Th>
               <Th style={{ minWidth: '150px' }}>Інше обладнання</Th>
-              {/* НОВА КОЛОНКА */}
-              <Th style={{ minWidth: '240px' }}>Файли</Th>
               <Th style={{ minWidth: '150px' }}>Примітка</Th>
-              <Th style={{ minWidth: '60px', textAlign: 'center' }}>Дії</Th>
+              <Th
+                className="sticky-right"
+                style={{ minWidth: '60px', textAlign: 'center' }}
+              >
+                Дії
+              </Th>
             </tr>
           </thead>
           <tbody>
             {vehicles.map(vehicle => {
               const statusStyle = getStatusStyles(vehicle.status);
-              const isExpanded = expandedRows[vehicle.id];
-              // Беремо файли з локального стейту, якщо вони там є (після завантаження), або з пропсів
               const vehicleFiles =
                 localFiles[vehicle.id] || vehicle.files || [];
 
+              const tanks = vehicle.tanks_data || [];
+              const tIdx = getIndex(tankIndices, vehicle.id);
+              const activeTank = tanks[tIdx];
+
+              const trackers = vehicle.trackers_data || [];
+              const trIdx = getIndex(trackerIndices, vehicle.id);
+              const activeTracker = trackers[trIdx];
+
+              const drps = vehicle.drps_data || [];
+              const dIdx = getIndex(drpIndices, vehicle.id);
+              const activeDrp = drps[dIdx];
+
               return (
                 <Tr key={vehicle.id}>
-                  {/* ... КОЛОНКИ 1-6 ЗАЛИШАЮТЬСЯ БЕЗ ЗМІН ... */}
-                  <Td>
+                  <Td className="sticky-left">
                     <strong style={{ display: 'block', fontSize: '14px' }}>
                       #{vehicle.internal_id || '—'} | {vehicle.plate || '—'}
                     </strong>
@@ -301,9 +393,12 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
                         style={{
                           background: statusStyle.bg,
                           color: statusStyle.text,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
                         }}
                       >
-                        ● {vehicle.status || 'connected'}
+                        {statusStyle.icon} {vehicle.status || 'connected'}
                       </StatusBadge>
                     </div>
                     <span
@@ -319,83 +414,391 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
                     </span>
                   </Td>
 
+                  {/* ТРЕКЕРИ СЛАЙДЕРОМ */}
                   <Td>
-                    {renderList(
-                      vehicle.trackers_data,
-                      vehicle.id,
-                      (tracker, i) => (
-                        <StackedItem key={i}>
-                          <strong style={{ color: '#0f172a' }}>
-                            {tracker.tracker_model || 'Трекер'}
-                          </strong>
-                          <div
-                            style={{
-                              color: '#475569',
-                              fontSize: '12px',
-                              marginTop: '2px',
-                            }}
+                    {trackers.length > 0 ? (
+                      <StackedItem
+                        style={{
+                          background: '#f8fafc',
+                          padding: '6px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          <strong
+                            style={{ color: '#0f172a', fontSize: '12px' }}
                           >
-                            <div>IMEI: {tracker.tracker_imei || '—'}</div>
-                            <div>S/N: {tracker.tracker_serial || '—'}</div>
-                            <div>
-                              SIM: {tracker.sim_number || '—'} (
-                              {tracker.sim_operator || '—'})
+                            {activeTracker.tracker_model || 'Трекер'} (
+                            {trIdx + 1}/{trackers.length})
+                          </strong>
+                          {trackers.length > 1 && (
+                            <div style={{ display: 'flex', gap: '2px' }}>
+                              <button
+                                onClick={() =>
+                                  handleSlide(
+                                    trackerIndices,
+                                    setTrackerIndices,
+                                    vehicle.id,
+                                    -1,
+                                    trackers.length
+                                  )
+                                }
+                                style={tableNavBtnStyle}
+                              >
+                                <ChevronLeft size={12} />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleSlide(
+                                    trackerIndices,
+                                    setTrackerIndices,
+                                    vehicle.id,
+                                    1,
+                                    trackers.length
+                                  )
+                                }
+                                style={tableNavBtnStyle}
+                              >
+                                <ChevronRight size={12} />
+                              </button>
                             </div>
-                            <div>
-                              Місце: {tracker.installation_location || '—'}
-                            </div>
-                          </div>
-                        </StackedItem>
-                      )
-                    )}
-                  </Td>
-
-                  <Td>
-                    {renderList(vehicle.tanks_data, vehicle.id, (tank, i) => (
-                      <StackedItem key={i}>
-                        <strong style={{ color: '#0f172a' }}>
-                          Бак #{i + 1}
-                        </strong>
+                          )}
+                        </div>
                         <div
                           style={{
                             color: '#475569',
-                            fontSize: '12px',
+                            fontSize: '11px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '1px',
+                          }}
+                        >
+                          <div>IMEI: {activeTracker.tracker_imei || '—'}</div>
+                          <div>SIM: {activeTracker.sim_number || '—'}</div>
+                        </div>
+                      </StackedItem>
+                    ) : (
+                      <span style={{ color: '#94a3b8' }}>—</span>
+                    )}
+                  </Td>
+
+                  {/* БАКИ ТА ФАЙЛИ СЛАЙДЕРОМ */}
+                  <Td>
+                    {tanks.length > 0 ? (
+                      <StackedItem
+                        style={{
+                          background: '#f8fafc',
+                          padding: '6px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          <strong
+                            style={{ color: '#0f172a', fontSize: '12px' }}
+                          >
+                            Бак #{tIdx + 1} ({tIdx + 1}/{tanks.length})
+                          </strong>
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: '4px',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <label
+                              style={{
+                                cursor: isUploading[`${vehicle.id}_${tIdx}`]
+                                  ? 'wait'
+                                  : 'pointer',
+                                color: '#2563eb',
+                                fontSize: '11px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                              }}
+                              title="Додати файл до цього бака"
+                            >
+                              <input
+                                type="file"
+                                hidden
+                                onChange={e =>
+                                  handleUploadFile(vehicle.id, tIdx, e)
+                                }
+                                accept=".csv, .txt, .xls, .xlsx"
+                                disabled={isUploading[`${vehicle.id}_${tIdx}`]}
+                              />
+                              <Upload size={11} /> Файл
+                            </label>
+                            {tanks.length > 1 && (
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                <button
+                                  onClick={() =>
+                                    handleSlide(
+                                      tankIndices,
+                                      setTankIndices,
+                                      vehicle.id,
+                                      -1,
+                                      tanks.length
+                                    )
+                                  }
+                                  style={tableNavBtnStyle}
+                                >
+                                  <ChevronLeft size={12} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleSlide(
+                                      tankIndices,
+                                      setTankIndices,
+                                      vehicle.id,
+                                      1,
+                                      tanks.length
+                                    )
+                                  }
+                                  style={tableNavBtnStyle}
+                                >
+                                  <ChevronRight size={12} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            color: '#475569',
+                            fontSize: '11px',
                             marginTop: '2px',
                           }}
                         >
                           <div>
-                            Об'єм:{' '}
-                            <strong>
-                              {tank.tank_volume ? `${tank.tank_volume} л` : '—'}
-                            </strong>
+                            Паспорт:{' '}
+                            <strong>{activeTank.tank_volume ?? '—'} л</strong>
                           </div>
-                          {tank.tank_dimensions && (
-                            <div>Розм: {tank.tank_dimensions}</div>
-                          )}
+                          <div>
+                            Факт:{' '}
+                            <strong>{activeTank.actual_volume ?? '—'} л</strong>
+                          </div>
+                          {(() => {
+                            const def = calculateDeformation(
+                              activeTank.tank_volume,
+                              activeTank.actual_volume
+                            );
+                            if (!def) return null;
+                            const isPlus = def.diff > 0;
+                            return (
+                              <div
+                                style={{
+                                  color: isPlus ? '#2563eb' : '#dc2626',
+                                  fontWeight: '600',
+                                }}
+                              >
+                                Деф: {isPlus ? `+${def.diff}` : def.diff}л (
+                                {isPlus
+                                  ? `+${def.percent}%`
+                                  : `${def.percent}%`}
+                                )
+                              </div>
+                            );
+                          })()}
                         </div>
+
+                        {vehicleFiles.filter(f => f.tank_index === tIdx)
+                          .length > 0 && (
+                          <div
+                            style={{
+                              marginTop: '4px',
+                              borderTop: '1px solid #cbd5e1',
+                              paddingTop: '3px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '2px',
+                            }}
+                          >
+                            {vehicleFiles
+                              .filter(f => f.tank_index === tIdx)
+                              .map(f => (
+                                <div
+                                  key={f.id}
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    background: 'white',
+                                    padding: '2px 4px',
+                                    borderRadius: '3px',
+                                    border: '1px solid #cbd5e1',
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontSize: '10px',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      maxWidth: '90px',
+                                    }}
+                                    title={f.file_name}
+                                  >
+                                    {f.file_name}
+                                  </span>
+                                  <div style={{ display: 'flex', gap: '2px' }}>
+                                    <button
+                                      onClick={() => handlePreview(f)}
+                                      style={iconBtnStyle}
+                                      title="Переглянути"
+                                    >
+                                      <Eye size={12} color="#3b82f6" />
+                                    </button>
+                                    <label
+                                      style={iconBtnStyle}
+                                      title="Замінити"
+                                    >
+                                      <input
+                                        type="file"
+                                        hidden
+                                        onChange={e =>
+                                          handleReplaceFile(
+                                            vehicle.id,
+                                            f.id,
+                                            tIdx,
+                                            e
+                                          )
+                                        }
+                                        accept=".csv, .txt, .xls, .xlsx"
+                                      />
+                                      <RefreshCw size={12} color="#10b981" />
+                                    </label>
+                                    <a
+                                      href={`http://127.0.0.1:8000/${f.file_path}`}
+                                      download={f.file_name}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{
+                                        ...iconBtnStyle,
+                                        color: '#64748b',
+                                      }}
+                                      title="Скачати"
+                                    >
+                                      <Download size={12} />
+                                    </a>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteFile(vehicle.id, f.id)
+                                      }
+                                      style={iconBtnStyle}
+                                      title="Видалити"
+                                    >
+                                      <Trash2 size={12} color="#ef4444" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
                       </StackedItem>
-                    ))}
+                    ) : (
+                      <span style={{ color: '#94a3b8' }}>—</span>
+                    )}
                   </Td>
 
+                  {/* ДАТЧИКИ LLS СЛАЙДЕРОМ */}
                   <Td>
-                    {renderList(vehicle.drps_data, vehicle.id, (drp, i) => (
-                      <StackedItem key={i}>
-                        <strong style={{ color: '#0f172a' }}>
-                          {drp.drp_type || 'Датчик'}
-                        </strong>
+                    {drps.length > 0 ? (
+                      <StackedItem
+                        style={{
+                          background: '#f8fafc',
+                          padding: '6px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          <strong
+                            style={{ color: '#0f172a', fontSize: '12px' }}
+                          >
+                            {activeDrp.drp_type || 'Датчик'} ({dIdx + 1}/
+                            {drps.length})
+                          </strong>
+                          {drps.length > 1 && (
+                            <div style={{ display: 'flex', gap: '2px' }}>
+                              <button
+                                onClick={() =>
+                                  handleSlide(
+                                    drpIndices,
+                                    setDrpIndices,
+                                    vehicle.id,
+                                    -1,
+                                    drps.length
+                                  )
+                                }
+                                style={tableNavBtnStyle}
+                              >
+                                <ChevronLeft size={12} />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleSlide(
+                                    drpIndices,
+                                    setDrpIndices,
+                                    vehicle.id,
+                                    1,
+                                    drps.length
+                                  )
+                                }
+                                style={tableNavBtnStyle}
+                              >
+                                <ChevronRight size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         <div
                           style={{
                             color: '#475569',
-                            fontSize: '12px',
-                            marginTop: '2px',
+                            fontSize: '11px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '1px',
                           }}
                         >
-                          <div>S/N: {drp.serial_number || '—'}</div>
-                          <div>Тип: {drp.connection_type || '—'}</div>
-                          <div>Бак: #{drp.tank_id || '1'}</div>
+                          <div>S/N: {activeDrp.serial_number || '—'}</div>
+                          <div>
+                            Висота:{' '}
+                            {activeDrp.drp_height
+                              ? `${activeDrp.drp_height} мм`
+                              : '—'}
+                          </div>
+                          <div>Тип: {activeDrp.connection_type || '—'}</div>
+                          <div>Бак: #{activeDrp.tank_id || '1'}</div>
                         </div>
                       </StackedItem>
-                    ))}
+                    ) : (
+                      <span style={{ color: '#94a3b8' }}>—</span>
+                    )}
                   </Td>
 
                   <Td style={{ maxWidth: '180px' }}>
@@ -414,120 +817,6 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
                     )}
                   </Td>
 
-                  {/* 7. НОВА КОЛОНКА: ФАЙЛИ ТАРУВАННЯ */}
-                  <Td>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      <strong style={{ fontSize: '13px' }}>
-                        Файли ({vehicleFiles.length})
-                      </strong>
-                      <label
-                        style={{
-                          cursor: isUploading[vehicle.id] ? 'wait' : 'pointer',
-                          color: '#2563eb',
-                        }}
-                        title="Завантажити новий файл"
-                      >
-                        <input
-                          type="file"
-                          hidden
-                          onChange={e => handleUploadFile(vehicle.id, e)}
-                          accept=".csv, .txt, .xls, .xlsx"
-                          disabled={isUploading[vehicle.id]}
-                        />
-                        <Upload size={16} />
-                      </label>
-                    </div>
-
-                    {renderList(vehicleFiles, vehicle.id, (f, i) => (
-                      <StackedItem
-                        key={f.id}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '4px 6px',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <Paperclip
-                            size={12}
-                            color="#64748b"
-                            style={{ flexShrink: 0 }}
-                          />
-                          <span
-                            style={{
-                              fontSize: '12px',
-                              fontWeight: '500',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxWidth: '110px',
-                            }}
-                            title={f.file_name}
-                          >
-                            {f.file_name}
-                          </span>
-                        </div>
-
-                        {/* Кнопки дій для файлу */}
-                        <div style={{ display: 'flex', gap: '2px' }}>
-                          <button
-                            onClick={() => handlePreview(f)}
-                            style={iconBtnStyle}
-                            title="Переглянути"
-                          >
-                            <Eye size={14} color="#3b82f6" />
-                          </button>
-
-                          <label style={iconBtnStyle} title="Замінити файл">
-                            <input
-                              type="file"
-                              hidden
-                              onChange={e =>
-                                handleReplaceFile(vehicle.id, f.id, e)
-                              }
-                              accept=".csv, .txt, .xls, .xlsx"
-                            />
-                            <RefreshCw size={14} color="#10b981" />
-                          </label>
-
-                          <a
-                            href={`http://127.0.0.1:8000/${f.file_path}`}
-                            download={f.file_name}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ ...iconBtnStyle, color: '#64748b' }}
-                            title="Завантажити"
-                          >
-                            <Download size={14} />
-                          </a>
-
-                          <button
-                            onClick={() => handleDeleteFile(vehicle.id, f.id)}
-                            style={iconBtnStyle}
-                            title="Видалити"
-                          >
-                            <Trash2 size={14} color="#ef4444" />
-                          </button>
-                        </div>
-                      </StackedItem>
-                    ))}
-                  </Td>
-
                   <Td style={{ maxWidth: '200px' }}>
                     {vehicle.notes ? (
                       <div
@@ -539,10 +828,6 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
                           padding: '6px',
                           borderRadius: '4px',
                           fontSize: '12px',
-                          display: '-webkit-box',
-                          WebkitLineClamp: isExpanded ? 'unset' : 3,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
                         }}
                       >
                         {vehicle.notes}
@@ -552,13 +837,31 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
                     )}
                   </Td>
 
-                  <Td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                    <ActionBtn
-                      onClick={() => onEdit(vehicle)}
-                      title="Редагувати"
+                  <Td
+                    className="sticky-right"
+                    style={{ textAlign: 'center', verticalAlign: 'middle' }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '4px',
+                        justifyContent: 'center',
+                      }}
                     >
-                      <Edit2 size={16} />
-                    </ActionBtn>
+                      <ActionBtn
+                        onClick={() => onEdit(vehicle)}
+                        title="Редагувати"
+                      >
+                        <Edit2 size={16} />
+                      </ActionBtn>
+                      <ActionBtn
+                        onClick={() => onDelete(vehicle.id)}
+                        title="Видалити в корзину"
+                        style={{ color: '#ef4444' }}
+                      >
+                        <Trash2 size={16} />
+                      </ActionBtn>
+                    </div>
                   </Td>
                 </Tr>
               );
@@ -567,7 +870,7 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
         </Table>
       </TableContainer>
 
-      {/* --- МОДАЛЬНЕ ВІКНО ПРЕВ'Ю (ТАКЕ Ж ЯК В КАРТЦІ) --- */}
+      {/* Модалка прев'ю з підтримкою Excel */}
       {previewFile && (
         <div
           style={{
@@ -589,7 +892,7 @@ export const VehicleTable = ({ vehicles, onEdit }) => {
               background: 'white',
               borderRadius: '8px',
               width: '100%',
-              maxWidth: '600px',
+              maxWidth: '750px',
               maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',

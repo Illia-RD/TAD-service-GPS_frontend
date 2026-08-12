@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { VehicleList } from './features/vehicles/VehicleList/VehicleList';
 import { TicketBoard } from './features/tickets/TicketBoard';
+import { Trash } from './features/trash/Trash'; // <--- Імпортуємо наш Кошик
 import { AppContainer, Header, Title, Nav, TabButton } from './App.styled';
 
 export default function App() {
-  // Стан для перемикання вкладок: 'vehicles' або 'tickets'
+  // Стан для перемикання вкладок: 'vehicles', 'tickets' або 'trash'
   const [activeTab, setActiveTab] = useState('vehicles');
 
   return (
@@ -24,11 +25,21 @@ export default function App() {
           >
             Сервісні роботи
           </TabButton>
+
+          {/* --- НОВА ВКЛАДКА КОРЗИНИ --- */}
+          <TabButton
+            $active={activeTab === 'trash'}
+            onClick={() => setActiveTab('trash')}
+          >
+            Кошик
+          </TabButton>
         </Nav>
       </Header>
 
       {/* Рендеримо контент залежно від обраної вкладки */}
-      {activeTab === 'vehicles' ? <VehicleList /> : <TicketBoard />}
+      {activeTab === 'vehicles' && <VehicleList />}
+      {activeTab === 'tickets' && <TicketBoard />}
+      {activeTab === 'trash' && <Trash />}
     </AppContainer>
   );
 }

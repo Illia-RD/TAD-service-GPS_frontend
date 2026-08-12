@@ -34,6 +34,7 @@ export const TanksSection = ({ formData, setFormData }) => {
         {
           id: '',
           tank_volume: '',
+          actual_volume: '', // <--- ДОДАЛИ ПОЛЕ ДЛЯ ФАКТИЧНОГО ОБ'ЄМУ
           tank_dimensions: '',
         },
       ],
@@ -108,7 +109,7 @@ export const TanksSection = ({ formData, setFormData }) => {
 
         <FormGroup>
           <div>
-            <Label>Об'єм (л)</Label>
+            <Label>Паспортний об'єм (л)</Label>
             <Input
               type="number"
               value={activeTank.tank_volume ?? ''}
@@ -116,6 +117,19 @@ export const TanksSection = ({ formData, setFormData }) => {
                 handleChange(actualTabIndex, 'tank_volume', e.target.value)
               }
               placeholder="Напр., 500"
+            />
+          </div>
+
+          {/* --- НОВЕ ПОЛЕ: ФАКТИЧНИЙ ОБ'ЄМ ПІСЛЯ ТАРУВАННЯ --- */}
+          <div>
+            <Label>Фактичний об'єм (л)</Label>
+            <Input
+              type="number"
+              value={activeTank.actual_volume ?? ''}
+              onChange={e =>
+                handleChange(actualTabIndex, 'actual_volume', e.target.value)
+              }
+              placeholder="Напр., 485"
             />
           </div>
 

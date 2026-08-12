@@ -14,8 +14,8 @@ const mapVehicleData = dbData => ({
   group_name: dbData.group_name || 'Без групи',
   status: dbData.status || 'connected',
   other_equipment: dbData.other_equipment || '',
-  notes: dbData.notes || '', // <--- ДОДАЛИ ОТРИМАННЯ ПРИМІТКИ З БЕКЕНДА
-  files: dbData.files || [], // <--- ДОДАЛИ ОТРИМАННЯ ФАЙЛІВ
+  notes: dbData.notes || '',
+  files: dbData.files || [],
   tanks_data: dbData.tanks_data || [],
   trackers_data: dbData.trackers_data || [],
   drps_data: dbData.drps_data || [],
@@ -26,7 +26,7 @@ const preparePayload = formData => ({
   year: formData.year ? parseInt(formData.year) : null,
   status: formData.status || 'connected',
   other_equipment: formData.other_equipment || '',
-  notes: formData.notes || '', // <--- ДОДАЛИ ВІДПРАВКУ ПРИМІТКИ НА БЕКЕНД
+  notes: formData.notes || '',
 
   tanks_data: (formData.tanks_data || []).map(tank => ({
     id: tank.id !== undefined && tank.id !== null ? String(tank.id) : '',
@@ -34,6 +34,10 @@ const preparePayload = formData => ({
       tank.tank_volume !== '' && tank.tank_volume !== null
         ? parseFloat(tank.tank_volume)
         : 0,
+    actual_volume:
+      tank.actual_volume !== '' && tank.actual_volume !== null
+        ? parseFloat(tank.actual_volume)
+        : null,
     tank_dimensions: tank.tank_dimensions || '',
   })),
 
@@ -41,11 +45,11 @@ const preparePayload = formData => ({
     id:
       tracker.id !== undefined && tracker.id !== null ? String(tracker.id) : '',
     tracker_model: tracker.tracker_model || '',
-    tracker_imei: tracker.tracker_imei || '', // <--- IMEI
-    tracker_serial: tracker.tracker_serial || '', // <--- СЕРІЙНИК
+    tracker_imei: tracker.tracker_imei || '',
+    tracker_serial: tracker.tracker_serial || '',
     sim_operator: tracker.sim_operator || '',
     sim_number: tracker.sim_number || '',
-    installation_location: tracker.installation_location || '', // <--- МІСЦЕ
+    installation_location: tracker.installation_location || '',
   })),
 
   drps_data: (formData.drps_data || []).map(lls => ({
@@ -53,8 +57,8 @@ const preparePayload = formData => ({
     drp_type: lls.drp_type || '',
     drp_height: lls.drp_height ? parseFloat(lls.drp_height) : null,
     tank_id: String(lls.tank_id || 1),
-    serial_number: lls.serial_number || '', // <--- СЕРІЙНИК ДВРП
-    connection_type: lls.connection_type || '', // <--- ТИП ПІДКЛЮЧЕННЯ
+    serial_number: lls.serial_number || '',
+    connection_type: lls.connection_type || '',
   })),
 });
 
@@ -83,7 +87,7 @@ export const vehiclesApi = {
   update: async (id, formData) => {
     try {
       const payload = preparePayload(formData);
-      const response = await axios.put(`${BASE_URL}${id}/`, payload);
+      const response = await axios.put(`${BASE_URL}${id}`, payload);
       return mapVehicleData(response.data);
     } catch (error) {
       if (error.response && error.response.status === 422) {
@@ -95,17 +99,25 @@ export const vehiclesApi = {
       throw error;
     }
   },
-  // ... попередній код ...
 
   getUniqueOtherEquipment: async () => {
     const response = await axios.get(`${BASE_URL}other-equipment/unique`);
     return response.data.map(item => ({ value: item.name, label: item.name }));
-  }, // <--- Не забудь тут кому!
+  },
 
-  // --- НОВА ФУНКЦІЯ ДЛЯ ЗАВАНТАЖЕННЯ ФАЙЛІВ ---
-  uploadTareFile: async (vehicleId, file) => {
+  uploadTareFile: async (
+    vehicleId,
+    file,
+    tankIndex = null,
+    fileType = 'тарування'
+  ) => {
     const formData = new FormData();
-    formData.append('file', file); // 'file' - це назва поля, яке чекає FastAPI
+    formData.append('file', file);
+
+    if (tankIndex !== null) {
+      formData.append('tank_index', tankIndex);
+    }
+    formData.append('file_type', fileType);
 
     const response = await axios.post(
       `${BASE_URL}${vehicleId}/upload-tare/`,
@@ -116,10 +128,38 @@ export const vehiclesApi = {
         },
       }
     );
-    return response.data;
+
+    return {
+      id: response.data.id || response.data.file_id,
+      file_name: response.data.file_name,
+      file_path: response.data.file_path,
+      tank_index: response.data.tank_index,
+      file_type: response.data.file_type,
+    };
   },
+
   deleteTareFile: async fileId => {
     const response = await axios.delete(`${BASE_URL}files/${fileId}`);
+    return response.data;
+  },
+
+  deleteVehicle: async id => {
+    const response = await axios.delete(`${BASE_URL}${id}`);
+    return response.data;
+  },
+
+  getTrash: async () => {
+    const response = await axios.get(`${BASE_URL}trash/`);
+    return response.data;
+  },
+
+  restoreVehicle: async id => {
+    const response = await axios.post(`${BASE_URL}${id}/restore/`);
+    return response.data;
+  },
+
+  restoreFile: async id => {
+    const response = await axios.post(`${BASE_URL}files/${id}/restore/`);
     return response.data;
   },
 };

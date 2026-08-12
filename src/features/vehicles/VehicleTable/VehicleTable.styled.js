@@ -31,6 +31,20 @@ export const Th = styled.th`
   padding: 12px 16px;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap; /* Заголовки не переносяться */
+  &.sticky-left {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: #f8fafc;
+    box-shadow: inset -1px 0 0 #e2e8f0; /* Тонка лінія-розділювач */
+  }
+  &.sticky-right {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+    background-color: #f8fafc;
+    box-shadow: inset 1px 0 0 #e2e8f0;
+  }
 `;
 
 export const Td = styled.td`
@@ -38,9 +52,25 @@ export const Td = styled.td`
   border-bottom: 1px solid #e2e8f0;
   color: #1e293b;
   vertical-align: top; /* Вирівнюємо по верху, бо елементів може бути кілька */
+  /* ДОДАЄМО КЛАСИ ДЛЯ ЗАКРІПЛЕННЯ */
+  &.sticky-left {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: inherit; /* Успадковує колір ховеру від Tr */
+    box-shadow: inset -1px 0 0 #e2e8f0;
+  }
+  &.sticky-right {
+    position: sticky;
+    right: 0;
+    z-index: 5;
+    background-color: inherit;
+    box-shadow: inset 1px 0 0 #e2e8f0;
+  }
 `;
 
 export const Tr = styled.tr`
+  background-color: #ffffff;
   &:hover {
     background-color: #f8fafc;
   }
