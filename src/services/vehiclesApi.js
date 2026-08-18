@@ -109,7 +109,8 @@ export const vehiclesApi = {
     vehicleId,
     file,
     tankIndex = null,
-    fileType = 'тарування'
+    fileType = 'тарування',
+    noNeckAccess = false // <--- Додали прийом галочки
   ) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -118,6 +119,7 @@ export const vehiclesApi = {
       formData.append('tank_index', tankIndex);
     }
     formData.append('file_type', fileType);
+    formData.append('no_neck_access', noNeckAccess); // <--- Відправляємо на бекенд
 
     const response = await axios.post(
       `${BASE_URL}${vehicleId}/upload-tare/`,
@@ -129,13 +131,14 @@ export const vehiclesApi = {
       }
     );
 
-    return {
-      id: response.data.id || response.data.file_id,
-      file_name: response.data.file_name,
-      file_path: response.data.file_path,
-      tank_index: response.data.tank_index,
-      file_type: response.data.file_type,
-    };
+    return response.data; // <--- Тепер бекенд віддає весь об'єкт, просто повертаємо його
+  },
+
+  // --- НОВА ФУНКЦІЯ ДЛЯ ЗБЕРЕЖЕННЯ ЛІНІЙКИ ---
+  updateTareFileData: async (fileId, data) => {
+    // data - це об'єкт { h1: 150, h2: 600, no_neck_access: false }
+    const response = await axios.put(`${BASE_URL}files/${fileId}/`, data);
+    return response.data;
   },
 
   deleteTareFile: async fileId => {

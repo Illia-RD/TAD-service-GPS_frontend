@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
 import {
   Edit2,
   ChevronLeft,
@@ -9,16 +8,15 @@ import {
   Upload,
   Trash2,
   RefreshCw,
-  Paperclip,
-  X,
+  XCircle,
   CheckCircle,
   Wrench,
-  XCircle,
   Activity,
   Banknote,
 } from 'lucide-react';
 
 import { vehiclesApi } from '../../../services/vehiclesApi';
+import { TareConverterModal } from '../TareConverterModal/TareConverterModal';
 import {
   TableContainer,
   Table,
@@ -39,9 +37,8 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
   const [trackerIndices, setTrackerIndices] = useState({});
   const [drpIndices, setDrpIndices] = useState({});
 
-  const [previewFile, setPreviewFile] = useState(null);
-  const [previewContent, setPreviewContent] = useState(null);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  // Стейт для нашого нового Конвертера!
+  const [converterData, setConverterData] = useState(null);
 
   const getIndex = (indicesObj, id) => indicesObj[id] || 0;
   const handleSlide = (indicesObj, setIndicesObj, id, direction, max) => {
@@ -110,11 +107,13 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
         ...prev,
         [`${vehicleId}_${tankIndex}`]: true,
       }));
+      // Викликаємо API
       const result = await vehiclesApi.uploadTareFile(
         vehicleId,
         file,
         tankIndex
       );
+
       const vehicle = vehicles.find(v => v.id === vehicleId);
       if (vehicle) {
         if (!vehicle.files) vehicle.files = [];
@@ -125,7 +124,10 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
         [vehicleId]: [...(vehicle?.files || [])],
       }));
     } catch (err) {
-      alert('Помилка завантаження файлу');
+      // Показуємо детальну помилку від парсера (якщо файл битий)
+      const errorMsg =
+        err.response?.data?.detail || 'Помилка завантаження файлу';
+      alert(errorMsg);
     } finally {
       setIsUploading(prev => ({
         ...prev,
@@ -165,6 +167,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
         tankIndex
       );
       await vehiclesApi.deleteTareFile(oldFileId);
+
       const vehicle = vehicles.find(v => v.id === vehicleId);
       if (vehicle && vehicle.files) {
         vehicle.files = vehicle.files.filter(f => f.id !== oldFileId);
@@ -175,7 +178,8 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
         [vehicleId]: [...(vehicle?.files || [])],
       }));
     } catch (err) {
-      alert('Помилка заміни файлу');
+      const errorMsg = err.response?.data?.detail || 'Помилка заміни файлу';
+      alert(errorMsg);
     } finally {
       setIsUploading(prev => ({
         ...prev,
@@ -185,113 +189,9 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
     }
   };
 
-  const handlePreview = async file => {
-    setPreviewFile(file);
-    const ext = file.file_name.split('.').pop().toLowerCase();
-    const fileUrl = `http://127.0.0.1:8000/${file.file_path}`;
-
-    if (ext === 'xls' || ext === 'xlsx') {
-      try {
-        setIsPreviewLoading(true);
-        const res = await fetch(fileUrl);
-        const arrayBuffer = await res.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const htmlData = XLSX.utils.sheet_to_html(worksheet, { header: '' });
-        setPreviewContent({ type: 'excel', html: htmlData });
-      } catch (err) {
-        setPreviewContent({ type: 'error' });
-      } finally {
-        setIsPreviewLoading(false);
-      }
-      return;
-    }
-
-    try {
-      setIsPreviewLoading(true);
-      const response = await fetch(fileUrl);
-      const text = await response.text();
-      setPreviewContent({ type: 'text', data: text });
-    } catch (error) {
-      setPreviewContent({ type: 'error' });
-    } finally {
-      setIsPreviewLoading(false);
-    }
-  };
-
-  const renderPreviewContent = () => {
-    if (isPreviewLoading)
-      return (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          Завантаження вмісту...
-        </div>
-      );
-    if (!previewContent || previewContent.type === 'error')
-      return (
-        <div style={{ color: 'red', textAlign: 'center' }}>
-          Не вдалося прочитати файл.
-        </div>
-      );
-
-    if (previewContent.type === 'excel') {
-      return (
-        <div
-          dangerouslySetInnerHTML={{ __html: previewContent.html }}
-          style={{ width: '100%', overflowX: 'auto', fontSize: '13px' }}
-        />
-      );
-    }
-
-    const isCsv = previewFile?.file_name.toLowerCase().endsWith('.csv');
-    const textData = previewContent.data;
-
-    if (isCsv && textData) {
-      const rows = textData.split('\n').filter(row => row.trim() !== '');
-      return (
-        <table
-          style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '13px',
-          }}
-        >
-          <tbody>
-            {rows.map((row, rIdx) => {
-              const cols = row.split(/,|;/);
-              return (
-                <tr key={rIdx}>
-                  {cols.map((col, cIdx) => (
-                    <td
-                      key={cIdx}
-                      style={{
-                        border: '1px solid #e2e8f0',
-                        padding: '4px 8px',
-                      }}
-                    >
-                      {col}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      );
-    }
-    return (
-      <pre
-        style={{
-          whiteSpace: 'pre-wrap',
-          fontSize: '13px',
-          background: '#f8fafc',
-          padding: '10px',
-          borderRadius: '4px',
-        }}
-      >
-        {textData}
-      </pre>
-    );
+  // Відкриваємо наш новий Конвертер замість старого прев'ю
+  const handlePreview = (file, vehicle) => {
+    setConverterData({ file, vehicle });
   };
 
   if (!vehicles || vehicles.length === 0) {
@@ -659,10 +559,11 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                                     {f.file_name}
                                   </span>
                                   <div style={{ display: 'flex', gap: '2px' }}>
+                                    {/* === ТУТ ТЕПЕР ВІДКРИВАЄТЬСЯ НАШ КОНВЕРТЕР === */}
                                     <button
-                                      onClick={() => handlePreview(f)}
+                                      onClick={() => handlePreview(f, vehicle)}
                                       style={iconBtnStyle}
-                                      title="Переглянути"
+                                      title="Відкрити Тарування"
                                     >
                                       <Eye size={12} color="#3b82f6" />
                                     </button>
@@ -694,7 +595,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                                         ...iconBtnStyle,
                                         color: '#64748b',
                                       }}
-                                      title="Скачати"
+                                      title="Скачати CSV"
                                     >
                                       <Download size={12} />
                                     </a>
@@ -870,117 +771,28 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
         </Table>
       </TableContainer>
 
-      {/* Модалка прев'ю з підтримкою Excel */}
-      {previewFile && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '20px',
+      {/* МАГІЯ ТУТ: Викликаємо наш новий Конвертер! */}
+      {converterData && (
+        <TareConverterModal
+          file={converterData.file}
+          vehicle={converterData.vehicle}
+          onClose={() => setConverterData(null)}
+          onUpdateFile={updatedFile => {
+            // Оновлюємо стейт, щоб нові H1, H2 та Галочка застосувались миттєво
+            setLocalFiles(prev => {
+              const vehicleId = converterData.vehicle.id;
+              const vFiles = prev[vehicleId] || [];
+              return {
+                ...prev,
+                [vehicleId]: vFiles.map(f =>
+                  f.id === updatedFile.id ? updatedFile : f
+                ),
+              };
+            });
+            // Щоб у самій відкритій модалці теж дані оновились
+            setConverterData(prev => ({ ...prev, file: updatedFile }));
           }}
-        >
-          <div
-            style={{
-              background: 'white',
-              borderRadius: '8px',
-              width: '100%',
-              maxWidth: '750px',
-              maxHeight: '90vh',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <div
-              style={{
-                padding: '16px 20px',
-                borderBottom: '1px solid #e2e8f0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <strong
-                style={{
-                  fontSize: '16px',
-                  color: '#0f172a',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <Eye size={18} color="#3b82f6" /> {previewFile.file_name}
-              </strong>
-              <button
-                onClick={() => setPreviewFile(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#64748b',
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-              {renderPreviewContent()}
-            </div>
-            <div
-              style={{
-                padding: '16px 20px',
-                borderTop: '1px solid #e2e8f0',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '12px',
-                background: '#f8fafc',
-                borderBottomLeftRadius: '8px',
-                borderBottomRightRadius: '8px',
-              }}
-            >
-              <button
-                onClick={() => setPreviewFile(null)}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #cbd5e1',
-                  background: 'white',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                }}
-              >
-                Закрити
-              </button>
-              <a
-                href={`http://127.0.0.1:8000/${previewFile.file_path}`}
-                download={previewFile.file_name}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  padding: '8px 16px',
-                  background: '#3b82f6',
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '6px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Download size={16} /> Скачати файл
-              </a>
-            </div>
-          </div>
-        </div>
+        />
       )}
     </>
   );
