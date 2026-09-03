@@ -71,8 +71,12 @@ export const TareConverterModal = ({
 
         const lines = text.split('\n').filter(l => l.trim() !== '');
         const parsedPoints = [];
-        for (let i = 1; i < lines.length; i++) {
-          const [liters, code] = lines[i].split(',');
+
+        // Читаємо з 0 рядка (заголовків більше немає)
+        for (let i = 0; i < lines.length; i++) {
+          // Розпаковуємо як [Код, Літри], бо файл у стандартному форматі X,Y
+          const [code, liters] = lines[i].split(',');
+
           if (liters !== undefined && code !== undefined) {
             parsedPoints.push({
               liters: parseFloat(liters),
@@ -374,7 +378,7 @@ export const TareConverterModal = ({
                         <thead>
                           <tr>
                             <th>Об'єм (Л)</th>
-                            <th>Код</th>
+                            <th>Код ДВРП</th>
                           </tr>
                         </thead>
                         <tbody>
