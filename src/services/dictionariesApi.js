@@ -17,4 +17,12 @@ export const dictionariesApi = {
   trackerModels: generateApi('tracker-models'),
   simOperators: generateApi('sim-operators'),
   groups: generateApi('groups'),
+
+  // --- НОВИЙ ДОДАТОК: КАТАЛОГ БАКІВ ---
+
+  tankModels: {
+    getAll: async () => (await axios.get(`${BASE_URL}tank-models`)).data,
+    create: async data =>
+      (await axios.post(`${BASE_URL}tank-models`, data)).data,
+  },
 };

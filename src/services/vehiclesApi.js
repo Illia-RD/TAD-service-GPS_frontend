@@ -30,6 +30,8 @@ const preparePayload = formData => ({
 
   tanks_data: (formData.tanks_data || []).map(tank => ({
     id: tank.id !== undefined && tank.id !== null ? String(tank.id) : '',
+    // --- ОНОВЛЕНО ПІД НОВУ СТРУКТУРУ БАКА ---
+    tank_model_id: tank.tank_model_id ? parseInt(tank.tank_model_id) : null,
     tank_volume:
       tank.tank_volume !== '' && tank.tank_volume !== null
         ? parseFloat(tank.tank_volume)
@@ -38,7 +40,8 @@ const preparePayload = formData => ({
       tank.actual_volume !== '' && tank.actual_volume !== null
         ? parseFloat(tank.actual_volume)
         : null,
-    tank_dimensions: tank.tank_dimensions || '',
+    notes: tank.notes || '',
+    photo_paths: tank.photo_paths || [],
   })),
 
   trackers_data: (formData.trackers_data || []).map(tracker => ({
@@ -105,12 +108,22 @@ export const vehiclesApi = {
     return response.data.map(item => ({ value: item.name, label: item.name }));
   },
 
+  // === НОВИЙ МЕТОД: ЗАВАНТАЖЕННЯ ФОТО БАКА ===
+  uploadTankPhoto: async file => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axios.post(`${BASE_URL}upload/photo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data; // Поверне { photo_path: "/uploads/photos/..." }
+  },
+
   uploadTareFile: async (
     vehicleId,
     file,
     tankIndex = null,
     fileType = 'тарування',
-    noNeckAccess = false // <--- Додали прийом галочки
+    noNeckAccess = false
   ) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -119,7 +132,7 @@ export const vehiclesApi = {
       formData.append('tank_index', tankIndex);
     }
     formData.append('file_type', fileType);
-    formData.append('no_neck_access', noNeckAccess); // <--- Відправляємо на бекенд
+    formData.append('no_neck_access', noNeckAccess);
 
     const response = await axios.post(
       `${BASE_URL}${vehicleId}/upload-tare/`,
@@ -130,13 +143,11 @@ export const vehiclesApi = {
         },
       }
     );
-
-    return response.data; // <--- Тепер бекенд віддає весь об'єкт, просто повертаємо його
+    return response.data;
   },
 
-  // --- НОВА ФУНКЦІЯ ДЛЯ ЗБЕРЕЖЕННЯ ЛІНІЙКИ ---
+  // Оновлення ТАР-файлу (тепер приймає будь-які дані: h1, h2, is_etalon, vehicle_id=null)
   updateTareFileData: async (fileId, data) => {
-    // data - це об'єкт { h1: 150, h2: 600, no_neck_access: false }
     const response = await axios.put(`${BASE_URL}files/${fileId}/`, data);
     return response.data;
   },
@@ -163,6 +174,12 @@ export const vehiclesApi = {
 
   restoreFile: async id => {
     const response = await axios.post(`${BASE_URL}files/${id}/restore/`);
+    return response.data;
+  },
+
+  // === НОВИЙ МЕТОД: ОТРИМАННЯ АРХІВУ ФАЙЛІВ ===
+  getArchiveFiles: async () => {
+    const response = await axios.get(`${BASE_URL}archive/files/`);
     return response.data;
   },
 };

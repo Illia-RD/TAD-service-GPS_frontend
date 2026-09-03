@@ -8,7 +8,7 @@ import {
   Square,
   Download,
 } from 'lucide-react';
-import * as XLSX from 'xlsx'; // <--- Повертаємо Excel для експорту!
+import * as XLSX from 'xlsx';
 import { vehiclesApi } from '../../../services/vehiclesApi';
 
 import {
