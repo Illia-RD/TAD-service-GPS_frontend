@@ -12,11 +12,15 @@ import {
 } from './VehicleList.styled';
 import { vehiclesApi } from '../../../services/vehiclesApi';
 
+// ДОДАЛИ ІМПОРТ КАТАЛОГУ
+import { dictionariesApi } from '../../../services/dictionariesApi';
+
 export const VehicleList = () => {
   const [vehicles, setVehicles] = useState([]);
+  const [tankModels, setTankModels] = useState([]); // <--- СТАН ДЛЯ КАТАЛОГУ БАКІВ
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
-
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const [viewMode, setViewMode] = useState(() => {
@@ -30,8 +34,17 @@ export const VehicleList = () => {
       .catch(err => console.error('Помилка при завантаженні авто:', err));
   };
 
+  // --- ЗАВАНТАЖЕННЯ КАТАЛОГУ БАКІВ ---
+  const loadTankModels = () => {
+    dictionariesApi.tankModels
+      .getAll()
+      .then(data => setTankModels(data))
+      .catch(err => console.error('Помилка завантаження каталогу баків:', err));
+  };
+
   useEffect(() => {
     loadVehicles();
+    loadTankModels(); // Завантажуємо при старті
   }, []);
 
   const handleEdit = vehicle => {
@@ -40,7 +53,6 @@ export const VehicleList = () => {
     setIsModalOpen(true);
   };
 
-  // --- НОВА ФУНКЦІЯ: ВИДАЛЕННЯ АВТО ---
   const handleDeleteVehicle = async id => {
     const confirmDelete = window.confirm(
       'Ви впевнені, що хочете видалити цей автомобіль? Він буде переміщений у корзину.'
@@ -49,7 +61,6 @@ export const VehicleList = () => {
 
     try {
       await vehiclesApi.deleteVehicle(id);
-      // Після успішного видалення просто перевантажуємо список
       loadVehicles();
     } catch (error) {
       console.error('Помилка при видаленні авто:', error);
@@ -130,16 +141,18 @@ export const VehicleList = () => {
             <VehicleCard
               key={v.id}
               vehicle={v}
+              tankModels={tankModels} /* <--- ПЕРЕДАЄМО КАТАЛОГ */
               onEdit={handleEdit}
-              onDelete={handleDeleteVehicle} /* Прокидаємо функцію */
+              onDelete={handleDeleteVehicle}
             />
           ))}
         </ListWrapper>
       ) : (
         <VehicleTable
           vehicles={vehicles}
+          tankModels={tankModels} /* <--- ПЕРЕДАЄМО КАТАЛОГ */
           onEdit={handleEdit}
-          onDelete={handleDeleteVehicle} /* Прокидаємо функцію */
+          onDelete={handleDeleteVehicle}
         />
       )}
     </>

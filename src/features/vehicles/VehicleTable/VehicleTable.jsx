@@ -17,6 +17,9 @@ import {
 
 import { vehiclesApi } from '../../../services/vehiclesApi';
 import { TareConverterModal } from '../TareConverterModal/TareConverterModal';
+// УВАГА: Перевір цей шлях, він має вести до твого нового компонента 3D!
+import { Tank3DViewer } from '../../tanksCatalog/Tank3DViewer/Tank3DViewer';
+
 import {
   TableContainer,
   Table,
@@ -28,7 +31,7 @@ import {
   StackedItem,
 } from './VehicleTable.styled';
 
-export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
+export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
   const [localFiles, setLocalFiles] = useState({});
   const [isUploading, setIsUploading] = useState({});
 
@@ -37,10 +40,15 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
   const [trackerIndices, setTrackerIndices] = useState({});
   const [drpIndices, setDrpIndices] = useState({});
 
-  // Стейт для нашого нового Конвертера!
+  // Стейт для Конвертера
   const [converterData, setConverterData] = useState(null);
 
+  // Стейт для Галереї бака (3D + Фото)
+  const [viewingTank, setViewingTank] = useState(null);
+  const [photoIndex, setPhotoIndex] = useState(0);
+
   const getIndex = (indicesObj, id) => indicesObj[id] || 0;
+
   const handleSlide = (indicesObj, setIndicesObj, id, direction, max) => {
     const current = indicesObj[id] || 0;
     let next = current + direction;
@@ -49,7 +57,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
     setIndicesObj(prev => ({ ...prev, [id]: next }));
   };
 
-  // --- ФУНКЦІЯ РОЗРАХУНОК ДЕФОРМАЦІЇ (+/-) ---
+  // Розрахунок деформації (+/-)
   const calculateDeformation = (nominal, actual) => {
     if (
       nominal === undefined ||
@@ -107,7 +115,6 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
         ...prev,
         [`${vehicleId}_${tankIndex}`]: true,
       }));
-      // Викликаємо API
       const result = await vehiclesApi.uploadTareFile(
         vehicleId,
         file,
@@ -124,7 +131,6 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
         [vehicleId]: [...(vehicle?.files || [])],
       }));
     } catch (err) {
-      // Показуємо детальну помилку від парсера (якщо файл битий)
       const errorMsg =
         err.response?.data?.detail || 'Помилка завантаження файлу';
       alert(errorMsg);
@@ -189,7 +195,6 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
     }
   };
 
-  // Відкриваємо наш новий Конвертер замість старого прев'ю
   const handlePreview = (file, vehicle) => {
     setConverterData({ file, vehicle });
   };
@@ -266,6 +271,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
 
               return (
                 <Tr key={vehicle.id}>
+                  {/* ІДЕНТИФІКАЦІЯ */}
                   <Td className="sticky-left">
                     <strong style={{ display: 'block', fontSize: '14px' }}>
                       #{vehicle.internal_id || '—'} | {vehicle.plate || '—'}
@@ -287,6 +293,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                     </div>
                   </Td>
 
+                  {/* СТАТУС / ГРУПА */}
                   <Td>
                     <div style={{ marginBottom: '8px' }}>
                       <StatusBadge
@@ -314,7 +321,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                     </span>
                   </Td>
 
-                  {/* ТРЕКЕРИ СЛАЙДЕРОМ */}
+                  {/* ТРЕКЕРИ */}
                   <Td>
                     {trackers.length > 0 ? (
                       <StackedItem
@@ -414,6 +421,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                           >
                             Бак #{tIdx + 1} ({tIdx + 1}/{tanks.length})
                           </strong>
+
                           <div
                             style={{
                               display: 'flex',
@@ -487,6 +495,38 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                             marginTop: '2px',
                           }}
                         >
+                          {/* ПОШУК НАЗВИ ТА ГАБАРИТІВ З КАТАЛОГУ */}
+                          {(() => {
+                            const model = tankModels?.find(
+                              m => m.id === activeTank.tank_model_id
+                            );
+                            return model ? (
+                              <div style={{ marginBottom: '4px' }}>
+                                <strong
+                                  style={{
+                                    color: '#0f172a',
+                                    fontWeight: '600',
+                                  }}
+                                >
+                                  {model.name}
+                                </strong>
+                                {model.shape_type !== 'custom' && (
+                                  <span
+                                    style={{
+                                      fontSize: '11px',
+                                      color: '#64748b',
+                                      fontWeight: '400',
+                                      marginLeft: '6px',
+                                    }}
+                                  >
+                                    ({model.dim_l}x{model.dim_w}x
+                                    {model.dim_h || model.dim_w} мм)
+                                  </span>
+                                )}
+                              </div>
+                            ) : null;
+                          })()}
+
                           <div>
                             Паспорт:{' '}
                             <strong>{activeTank.tank_volume ?? '—'} л</strong>
@@ -495,6 +535,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                             Факт:{' '}
                             <strong>{activeTank.actual_volume ?? '—'} л</strong>
                           </div>
+
                           {(() => {
                             const def = calculateDeformation(
                               activeTank.tank_volume,
@@ -517,8 +558,85 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                               </div>
                             );
                           })()}
-                        </div>
 
+                          {/* ЯВНІ КНОПКИ ДЛЯ 3D ТА ФОТО */}
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: '6px',
+                              marginTop: '6px',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            {/* Кнопка 3D Моделі */}
+                            {(() => {
+                              const model = tankModels?.find(
+                                m => m.id === activeTank.tank_model_id
+                              );
+                              if (model) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setViewingTank({
+                                        tank: activeTank,
+                                        model,
+                                      });
+                                      setPhotoIndex(0);
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      background: '#e0e7ff',
+                                      border: '1px solid #c7d2fe',
+                                      padding: '2px 8px',
+                                      borderRadius: '10px',
+                                      color: '#3730a3',
+                                      cursor: 'pointer',
+                                      fontWeight: '500',
+                                    }}
+                                    title="Відкрити 3D модель"
+                                  >
+                                    🧊 3D
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
+
+                            {/* Кнопка Фото */}
+                            {activeTank.photo_paths &&
+                              activeTank.photo_paths.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const model = tankModels?.find(
+                                      m => m.id === activeTank.tank_model_id
+                                    );
+                                    setViewingTank({ tank: activeTank, model });
+                                    setPhotoIndex(0);
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    background: '#f8fafc',
+                                    border: '1px solid #cbd5e1',
+                                    padding: '2px 8px',
+                                    borderRadius: '10px',
+                                    color: '#334155',
+                                    cursor: 'pointer',
+                                    fontWeight: '500',
+                                  }}
+                                  title="Відкрити фотографії"
+                                >
+                                  📷 {activeTank.photo_paths.length} фото
+                                </button>
+                              )}
+                          </div>
+                        </div>
+                        {/* СПИСОК ФАЙЛІВ ТАРУВАННЯ */}
                         {vehicleFiles.filter(f => f.tank_index === tIdx)
                           .length > 0 && (
                           <div
@@ -559,7 +677,6 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                                     {f.file_name}
                                   </span>
                                   <div style={{ display: 'flex', gap: '2px' }}>
-                                    {/* === ТУТ ТЕПЕР ВІДКРИВАЄТЬСЯ НАШ КОНВЕРТЕР === */}
                                     <button
                                       onClick={() => handlePreview(f, vehicle)}
                                       style={iconBtnStyle}
@@ -619,7 +736,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                     )}
                   </Td>
 
-                  {/* ДАТЧИКИ LLS СЛАЙДЕРОМ */}
+                  {/* ДАТЧИКИ LLS */}
                   <Td>
                     {drps.length > 0 ? (
                       <StackedItem
@@ -702,6 +819,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                     )}
                   </Td>
 
+                  {/* ОБЛАДНАННЯ */}
                   <Td style={{ maxWidth: '180px' }}>
                     {vehicle.other_equipment ? (
                       <span
@@ -718,6 +836,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                     )}
                   </Td>
 
+                  {/* ПРИМІТКИ */}
                   <Td style={{ maxWidth: '200px' }}>
                     {vehicle.notes ? (
                       <div
@@ -738,6 +857,7 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                     )}
                   </Td>
 
+                  {/* ДІЇ */}
                   <Td
                     className="sticky-right"
                     style={{ textAlign: 'center', verticalAlign: 'middle' }}
@@ -771,14 +891,13 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
         </Table>
       </TableContainer>
 
-      {/* МАГІЯ ТУТ: Викликаємо наш новий Конвертер! */}
+      {/* МОДАЛКА: ТАРУВАННЯ */}
       {converterData && (
         <TareConverterModal
           file={converterData.file}
           vehicle={converterData.vehicle}
           onClose={() => setConverterData(null)}
           onUpdateFile={updatedFile => {
-            // Оновлюємо стейт, щоб нові H1, H2 та Галочка застосувались миттєво
             setLocalFiles(prev => {
               const vehicleId = converterData.vehicle.id;
               const vFiles = prev[vehicleId] || [];
@@ -789,10 +908,233 @@ export const VehicleTable = ({ vehicles, onEdit, onDelete }) => {
                 ),
               };
             });
-            // Щоб у самій відкритій модалці теж дані оновились
             setConverterData(prev => ({ ...prev, file: updatedFile }));
           }}
         />
+      )}
+
+      {/* === МОДАЛКА: 3D МОДЕЛЬ ТА ФОТОГАЛЕРЕЯ === */}
+      {viewingTank && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setViewingTank(null)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '900px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Хедер модалки */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px 24px',
+                borderBottom: '1px solid #e2e8f0',
+              }}
+            >
+              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>
+                {viewingTank.model ? viewingTank.model.name : 'Деталі бака'}
+              </h3>
+              <button
+                onClick={() => setViewingTank(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                }}
+              >
+                <XCircle size={24} />
+              </button>
+            </div>
+
+            {/* Тіло модалки */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '24px',
+                padding: '24px',
+              }}
+            >
+              {/* ЛІВА ЧАСТИНА: 3D В'ЮВЕР */}
+              <div style={{ flex: '1 1 300px', minWidth: '300px' }}>
+                <h4
+                  style={{
+                    marginTop: 0,
+                    marginBottom: '12px',
+                    color: '#475569',
+                    fontSize: '14px',
+                  }}
+                >
+                  3D Модель (можна крутити)
+                </h4>
+                {viewingTank.model ? (
+                  <Tank3DViewer tankModel={viewingTank.model} />
+                ) : (
+                  <div
+                    style={{
+                      height: '250px',
+                      background: '#f1f5f9',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#94a3b8',
+                    }}
+                  >
+                    Модель не обрана
+                  </div>
+                )}
+              </div>
+
+              {/* ПРАВА ЧАСТИНА: СЛАЙДЕР ФОТО */}
+              <div
+                style={{
+                  flex: '1 1 400px',
+                  minWidth: '300px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <h4
+                  style={{
+                    marginTop: 0,
+                    marginBottom: '12px',
+                    color: '#475569',
+                    fontSize: '14px',
+                  }}
+                >
+                  Фотографії монтажу
+                </h4>
+
+                {viewingTank.tank.photo_paths &&
+                viewingTank.tank.photo_paths.length > 0 ? (
+                  <div
+                    style={{
+                      background: '#0f172a',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      flex: 1,
+                    }}
+                  >
+                    <img
+                      src={`http://127.0.0.1:8000${viewingTank.tank.photo_paths[photoIndex].replace(/\\/g, '/')}`}
+                      alt="Бак"
+                      style={{
+                        width: '100%',
+                        height: '300px',
+                        objectFit: 'contain',
+                      }}
+                    />
+
+                    {/* Кнопки керування слайдером */}
+                    {viewingTank.tank.photo_paths.length > 1 && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          background: 'rgba(0,0,0,0.6)',
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          color: 'white',
+                        }}
+                      >
+                        <button
+                          onClick={() =>
+                            setPhotoIndex(p =>
+                              p > 0
+                                ? p - 1
+                                : viewingTank.tank.photo_paths.length - 1
+                            )
+                          }
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <ChevronLeft size={20} />
+                        </button>
+                        <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                          {photoIndex + 1} /{' '}
+                          {viewingTank.tank.photo_paths.length}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setPhotoIndex(p =>
+                              p < viewingTank.tank.photo_paths.length - 1
+                                ? p + 1
+                                : 0
+                            )
+                          }
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      height: '250px',
+                      border: '2px dashed #cbd5e1',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#94a3b8',
+                    }}
+                  >
+                    Фото відсутні
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

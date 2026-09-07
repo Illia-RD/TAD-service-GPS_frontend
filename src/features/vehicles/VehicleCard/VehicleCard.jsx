@@ -5,7 +5,6 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Paperclip,
   Upload,
   Download,
   Eye,
@@ -19,6 +18,8 @@ import {
 } from 'lucide-react';
 import { vehiclesApi } from '../../../services/vehiclesApi';
 import { TareConverterModal } from '../TareConverterModal/TareConverterModal';
+import { Tank3DViewer } from '../../tanksCatalog/Tank3DViewer/Tank3DViewer';
+
 import {
   Card,
   CardHeader,
@@ -30,7 +31,7 @@ import {
   Field,
 } from './VehicleCard.styled';
 
-export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
+export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
   const [tankIndex, setTankIndex] = useState(0);
   const [trackerIndex, setTrackerIndex] = useState(0);
@@ -39,6 +40,10 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
   const [files, setFiles] = useState(vehicle.files || []);
   const [isUploading, setIsUploading] = useState(false);
   const [converterData, setConverterData] = useState(null);
+
+  // Стан для Галереї (3D + Фото)
+  const [viewingTank, setViewingTank] = useState(null);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   const tanks = vehicle.tanks_data || [];
   const trackers = vehicle.trackers_data || [];
@@ -74,6 +79,7 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
       return { bg: '#dbeafe', text: '#1e40af', icon: <Activity size={14} /> };
     return defaultStyle;
   };
+
   const statusStyle = getStatusStyles(vehicle.status);
 
   const calculateDeformation = (nominal, actual) => {
@@ -293,9 +299,31 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
                       marginBottom: '8px',
                     }}
                   >
-                    <strong>
-                      Бак #{tankIndex + 1} ({tankIndex + 1} з {tanks.length})
-                    </strong>
+                    {/* НАЗВА БАКА З КАТАЛОГУ */}
+                    {(() => {
+                      const activeTank = tanks[tankIndex];
+                      const model = tankModels?.find(
+                        m => m.id === activeTank.tank_model_id
+                      );
+                      return (
+                        <div
+                          style={{ display: 'flex', flexDirection: 'column' }}
+                        >
+                          <strong>
+                            {model ? model.name : `Бак #${tankIndex + 1}`}
+                          </strong>
+                          {model && model.shape_type !== 'custom' && (
+                            <span
+                              style={{ fontSize: '11px', color: '#64748b' }}
+                            >
+                              ({model.dim_l}x{model.dim_w}x
+                              {model.dim_h || model.dim_w} мм)
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {tanks.length > 1 && (
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
@@ -321,14 +349,87 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
                       </div>
                     )}
                   </div>
-                  <div>
-                    Паспорт: <strong>{tanks[tankIndex].tank_volume}л</strong> |
-                    Факт: <strong>{tanks[tankIndex].actual_volume}л</strong>
+
+                  <div style={{ fontSize: '13px', color: '#334155' }}>
+                    Паспорт:{' '}
+                    <strong>{tanks[tankIndex].tank_volume ?? '—'} л</strong> |
+                    Факт:{' '}
+                    <strong>{tanks[tankIndex].actual_volume ?? '—'} л</strong>
                   </div>
+
+                  {/* КНОПКИ ДЛЯ 3D ТА ФОТО */}
+                  {(() => {
+                    const activeTank = tanks[tankIndex];
+                    const model = tankModels?.find(
+                      m => m.id === activeTank.tank_model_id
+                    );
+                    const hasPhotos =
+                      activeTank.photo_paths &&
+                      activeTank.photo_paths.length > 0;
+
+                    if (!model && !hasPhotos) return null;
+
+                    return (
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '8px',
+                        }}
+                      >
+                        {model && (
+                          <button
+                            onClick={() => {
+                              setViewingTank({ tank: activeTank, model });
+                              setPhotoIndex(0);
+                            }}
+                            style={{
+                              background: '#e0e7ff',
+                              color: '#3730a3',
+                              border: '1px solid #c7d2fe',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            🧊 3D Модель
+                          </button>
+                        )}
+                        {hasPhotos && (
+                          <button
+                            onClick={() => {
+                              setViewingTank({ tank: activeTank, model });
+                              setPhotoIndex(0);
+                            }}
+                            style={{
+                              background: '#f1f5f9',
+                              color: '#334155',
+                              border: '1px solid #cbd5e1',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            📷 {activeTank.photo_paths.length} фото
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div
                     style={{
-                      marginTop: '8px',
+                      marginTop: '12px',
                       borderTop: '1px solid #e2e8f0',
                       paddingTop: '8px',
                     }}
@@ -342,13 +443,16 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
                       }}
                     >
                       <span style={{ fontSize: '12px', fontWeight: '600' }}>
-                        Файли бака #{tankIndex + 1}:
+                        Файли тарування:
                       </span>
                       <label
                         style={{
-                          cursor: 'pointer',
+                          cursor: isUploading ? 'wait' : 'pointer',
                           color: '#2563eb',
                           fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
                         }}
                       >
                         <input
@@ -356,6 +460,7 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
                           hidden
                           onChange={e => handleFileChange(e, tankIndex)}
                           accept=".csv, .txt, .xls, .xlsx"
+                          disabled={isUploading}
                         />
                         <Upload size={12} /> Додати
                       </label>
@@ -416,8 +521,40 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
               <SectionTitle>GPS Трекери ({trackers.length})</SectionTitle>
               {trackers.length > 0 ? (
                 <div style={sliderBoxStyle}>
-                  <strong>{trackers[trackerIndex].tracker_model}</strong>
-                  <div style={{ fontSize: '12px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <strong>{trackers[trackerIndex].tracker_model}</strong>
+                    {trackers.length > 1 && (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() =>
+                            setTrackerIndex(p =>
+                              p > 0 ? p - 1 : trackers.length - 1
+                            )
+                          }
+                          style={navBtnStyle}
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            setTrackerIndex(p =>
+                              p < trackers.length - 1 ? p + 1 : 0
+                            )
+                          }
+                          style={navBtnStyle}
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '12px', marginTop: '4px' }}>
                     IMEI: {trackers[trackerIndex].tracker_imei}
                   </div>
                 </div>
@@ -430,8 +567,36 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
               <SectionTitle>Датчики LLS ({drps.length})</SectionTitle>
               {drps.length > 0 ? (
                 <div style={sliderBoxStyle}>
-                  <strong>{drps[drpIndex].drp_type}</strong>
-                  <div style={{ fontSize: '12px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <strong>{drps[drpIndex].drp_type}</strong>
+                    {drps.length > 1 && (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() =>
+                            setDrpIndex(p => (p > 0 ? p - 1 : drps.length - 1))
+                          }
+                          style={navBtnStyle}
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            setDrpIndex(p => (p < drps.length - 1 ? p + 1 : 0))
+                          }
+                          style={navBtnStyle}
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '12px', marginTop: '4px' }}>
                     Висота: {drps[drpIndex].drp_height} мм
                   </div>
                 </div>
@@ -460,10 +625,31 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
                 </div>
               </div>
             )}
+            {/* === ПРИМІТКИ === */}
+            {vehicle.notes && (
+              <div>
+                <SectionTitle>Примітка</SectionTitle>
+                <div
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    color: '#92400e',
+                    background: '#fef9c3',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    border: '1px solid #fef08a',
+                  }}
+                >
+                  {vehicle.notes}
+                </div>
+              </div>
+            )}
           </DetailsSection>
         )}
       </Card>
 
+      {/* МОДАЛКА КОНВЕРТЕРА */}
       {converterData && (
         <TareConverterModal
           file={converterData.file}
@@ -476,6 +662,185 @@ export const VehicleCard = ({ vehicle, onEdit, onDelete }) => {
             setConverterData(prev => ({ ...prev, file: updatedFile }));
           }}
         />
+      )}
+
+      {/* === МОДАЛКА: 3D МОДЕЛЬ ТА ФОТОГАЛЕРЕЯ (Мобільна адаптація) === */}
+      {viewingTank && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setViewingTank(null)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '500px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px 20px',
+                borderBottom: '1px solid #e2e8f0',
+              }}
+            >
+              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '16px' }}>
+                {viewingTank.model ? viewingTank.model.name : 'Деталі бака'}
+              </h3>
+              <button
+                onClick={() => setViewingTank(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                }}
+              >
+                <XCircle size={24} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+              }}
+            >
+              {/* 3D В'ЮВЕР */}
+              {viewingTank.model && (
+                <div>
+                  <h4
+                    style={{
+                      marginTop: 0,
+                      marginBottom: '8px',
+                      color: '#475569',
+                      fontSize: '14px',
+                    }}
+                  >
+                    3D Модель (можна крутити)
+                  </h4>
+                  <Tank3DViewer tankModel={viewingTank.model} />
+                </div>
+              )}
+
+              {/* СЛАЙДЕР ФОТО */}
+              {viewingTank.tank.photo_paths &&
+                viewingTank.tank.photo_paths.length > 0 && (
+                  <div>
+                    <h4
+                      style={{
+                        marginTop: 0,
+                        marginBottom: '8px',
+                        color: '#475569',
+                        fontSize: '14px',
+                      }}
+                    >
+                      Фотографії монтажу
+                    </h4>
+                    <div
+                      style={{
+                        background: '#0f172a',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <img
+                        src={`http://127.0.0.1:8000${viewingTank.tank.photo_paths[photoIndex].replace(/\\/g, '/')}`}
+                        alt="Бак"
+                        style={{
+                          width: '100%',
+                          height: '250px',
+                          objectFit: 'contain',
+                        }}
+                      />
+                      {viewingTank.tank.photo_paths.length > 1 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            background: 'rgba(0,0,0,0.6)',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            color: 'white',
+                          }}
+                        >
+                          <button
+                            onClick={() =>
+                              setPhotoIndex(p =>
+                                p > 0
+                                  ? p - 1
+                                  : viewingTank.tank.photo_paths.length - 1
+                              )
+                            }
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'white',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <ChevronLeft size={20} />
+                          </button>
+                          <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                            {photoIndex + 1} /{' '}
+                            {viewingTank.tank.photo_paths.length}
+                          </span>
+                          <button
+                            onClick={() =>
+                              setPhotoIndex(p =>
+                                p < viewingTank.tank.photo_paths.length - 1
+                                  ? p + 1
+                                  : 0
+                              )
+                            }
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'white',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <ChevronRight size={20} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
