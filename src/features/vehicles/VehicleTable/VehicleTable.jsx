@@ -14,7 +14,8 @@ import {
   Activity,
   Banknote,
 } from 'lucide-react';
-
+import { TrackerModal } from '../../../features/TrackerModal/TrackerModal';
+import { HardDrive } from 'lucide-react';
 import { vehiclesApi } from '../../../services/vehiclesApi';
 import { TareConverterModal } from '../TareConverterModal/TareConverterModal';
 // УВАГА: Перевір цей шлях, він має вести до твого нового компонента 3D!
@@ -32,6 +33,7 @@ import {
 } from './VehicleTable.styled';
 
 export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
+  const [trackerModalVehicle, setTrackerModalVehicle] = useState(null);
   const [localFiles, setLocalFiles] = useState({});
   const [isUploading, setIsUploading] = useState({});
 
@@ -260,8 +262,7 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
               const tanks = vehicle.tanks_data || [];
               const tIdx = getIndex(tankIndices, vehicle.id);
               const activeTank = tanks[tIdx];
-
-              const trackers = vehicle.trackers_data || [];
+              const trackers = vehicle.trackers || []; // Реальний масив об'єктів
               const trIdx = getIndex(trackerIndices, vehicle.id);
               const activeTracker = trackers[trIdx];
 
@@ -343,8 +344,8 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                           <strong
                             style={{ color: '#0f172a', fontSize: '12px' }}
                           >
-                            {activeTracker.tracker_model || 'Трекер'} (
-                            {trIdx + 1}/{trackers.length})
+                            {activeTracker.model || 'Трекер'} ({trIdx + 1}/
+                            {trackers.length})
                           </strong>
                           {trackers.length > 1 && (
                             <div style={{ display: 'flex', gap: '2px' }}>
@@ -388,13 +389,50 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                             gap: '1px',
                           }}
                         >
-                          <div>IMEI: {activeTracker.tracker_imei || '—'}</div>
-                          <div>SIM: {activeTracker.sim_number || '—'}</div>
+                          <div>IMEI: {activeTracker.imei || '—'}</div>
+                          {activeTracker.sim_cards?.length > 0 ? (
+                            <div>
+                              SIM: {activeTracker.sim_cards[0].phone_number}
+                            </div>
+                          ) : (
+                            <div style={{ color: '#ef4444' }}>
+                              Без SIM-карти
+                            </div>
+                          )}
                         </div>
                       </StackedItem>
                     ) : (
-                      <span style={{ color: '#94a3b8' }}>—</span>
+                      <div
+                        style={{
+                          color: '#94a3b8',
+                          fontSize: '12px',
+                          marginBottom: '6px',
+                        }}
+                      >
+                        —
+                      </div>
                     )}
+
+                    <button
+                      onClick={() => setTrackerModalVehicle(vehicle)}
+                      style={{
+                        width: '100%',
+                        marginTop: '6px',
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        border: '1px dashed #bfdbfe',
+                        borderRadius: '6px',
+                        padding: '4px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <HardDrive size={12} /> Управління
+                    </button>
                   </Td>
 
                   {/* БАКИ ТА ФАЙЛИ СЛАЙДЕРОМ */}
@@ -1135,6 +1173,13 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
             </div>
           </div>
         </div>
+      )}
+      {trackerModalVehicle && (
+        <TrackerModal
+          vehicle={trackerModalVehicle}
+          onClose={() => setTrackerModalVehicle(null)}
+          onUpdate={onUpdate}
+        />
       )}
     </>
   );

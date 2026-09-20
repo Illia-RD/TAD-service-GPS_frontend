@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { GeneralInfo } from './GeneralInfo/GeneralInfo';
 import { TanksSection } from './TanksSection/TanksSection';
-import { TrackersSection } from './TrackersSection/TrackersSection';
 import { LLSSection } from './LlsSection/LlsSection';
-import { OtherEquipment } from './OtherEquipment/OtherEquipment'; // <--- ТВОЯ СЕКЦІЯ
+import { OtherEquipment } from './OtherEquipment/OtherEquipment';
 
 import {
   FormWrapper,
@@ -26,28 +25,25 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
     year: '',
     euro_standard: '',
     group_name: '',
-    status: 'connected', // <--- СТАТУС
-    other_equipment: '', // <--- ІНШЕ ОБЛАДНАННЯ (РЯДОК)
-    trackers_data: [],
+    status: 'connected',
+    other_equipment: '',
     tanks_data: [],
     drps_data: [],
     notes: '',
   });
 
   const [dicts, setDicts] = useState({
-    trackerModels: [],
-    simOperators: [],
     drpTypes: [],
     makes: [],
     models: [],
     euroStandards: [],
     groups: [],
-    otherEquipment: [], // Якщо маєш довідник для цього
+    otherEquipment: [],
   });
+
   const [isLoadingDicts, setIsLoadingDicts] = useState(true);
 
   useEffect(() => {
-    // Якщо initialData є, підтягуємо існуючі дані, інакше ставимо дефолт
     setFormData(
       initialData
         ? {
@@ -58,7 +54,6 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
         : {
             tanks_data: [],
             drps_data: [],
-            trackers_data: [],
             other_equipment: '',
             status: 'connected',
           }
@@ -69,35 +64,23 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
     const fetchDictionaries = async () => {
       setIsLoadingDicts(true);
       try {
-        const [
-          trackers,
-          sims,
-          drps,
-          makes,
-          models,
-          euros,
-          groups,
-          uniqueEquipment,
-        ] = await Promise.all([
-          api.trackerModels.getAll(),
-          api.simOperators.getAll(),
-          api.drpTypes.getAll(),
-          api.makes.getAll(),
-          api.models.getAll(),
-          api.euroStandards.getAll(),
-          api.groups.getAll(),
-          vehiclesApi.getUniqueOtherEquipment(), // <--- Забираємо унікальне обладнання з бека
-        ]);
+        const [drps, makes, models, euros, groups, uniqueEquipment] =
+          await Promise.all([
+            api.drpTypes.getAll(),
+            api.makes.getAll(),
+            api.models.getAll(),
+            api.euroStandards.getAll(),
+            api.groups.getAll(),
+            vehiclesApi.getUniqueOtherEquipment(),
+          ]);
 
         setDicts({
-          trackerModels: trackers.map(t => ({ value: t.name, label: t.name })),
-          simOperators: sims.map(s => ({ value: s.name, label: s.name })),
           drpTypes: drps.map(d => ({ value: d.name, label: d.name })),
           makes: makes.map(m => ({ value: m.name, label: m.name })),
           models: models.map(m => ({ value: m.name, label: m.name })),
           euroStandards: euros.map(e => ({ value: e.name, label: e.name })),
           groups: groups.map(g => ({ value: g.name, label: g.name })),
-          otherEquipment: uniqueEquipment, // <--- Передаємо масив підказок сюди
+          otherEquipment: uniqueEquipment,
         });
       } catch (error) {
         console.error('Помилка завантаження довідників:', error);
@@ -118,12 +101,19 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
     const defaultData = {
       tanks_data: [],
       drps_data: [],
-      trackers_data: [],
       other_equipment: '',
       status: 'connected',
     };
+    // Видаляємо trackers з перевірки на зміни
+    const currentDataForCheck = { ...formData };
+    delete currentDataForCheck.trackers;
+
+    const initialDataForCheck = initialData ? { ...initialData } : defaultData;
+    delete initialDataForCheck.trackers;
+
     const hasChanges =
-      JSON.stringify(formData) !== JSON.stringify(initialData || defaultData);
+      JSON.stringify(currentDataForCheck) !==
+      JSON.stringify(initialDataForCheck);
 
     if (hasChanges) {
       const confirmDiscard = window.confirm(
@@ -154,7 +144,7 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
       <form onSubmit={handleSubmit}>
         <GeneralInfo {...sectionProps} />
         <TanksSection formData={formData} setFormData={setFormData} />
-        <TrackersSection {...sectionProps} />
+        {/* TrackersSection ВИДАЛЕНО */}
         <LLSSection {...sectionProps} />
 
         <OtherEquipment
@@ -164,7 +154,6 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
           isLoadingDicts={isLoadingDicts}
         />
 
-        {/* Секція Примітки */}
         <div style={{ marginTop: '20px', marginBottom: '20px' }}>
           <label
             style={{

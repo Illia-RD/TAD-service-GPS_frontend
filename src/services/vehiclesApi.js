@@ -17,20 +17,24 @@ const mapVehicleData = dbData => ({
   notes: dbData.notes || '',
   files: dbData.files || [],
   tanks_data: dbData.tanks_data || [],
-  trackers_data: dbData.trackers_data || [],
   drps_data: dbData.drps_data || [],
+  trackers: dbData.trackers || [], // Тепер це реальні об'єкти з окремої таблиці
 });
 
-const preparePayload = formData => ({
-  ...formData,
-  year: formData.year ? parseInt(formData.year) : null,
-  status: formData.status || 'connected',
-  other_equipment: formData.other_equipment || '',
-  notes: formData.notes || '',
+const preparePayload = formData => {
+  const payload = { ...formData };
 
-  tanks_data: (formData.tanks_data || []).map(tank => ({
+  // Видаляємо трекери з пейлоада, бо вони керуються окремими запитами
+  delete payload.trackers_data;
+  delete payload.trackers;
+
+  payload.year = formData.year ? parseInt(formData.year) : null;
+  payload.status = formData.status || 'connected';
+  payload.other_equipment = formData.other_equipment || '';
+  payload.notes = formData.notes || '';
+
+  payload.tanks_data = (formData.tanks_data || []).map(tank => ({
     id: tank.id !== undefined && tank.id !== null ? String(tank.id) : '',
-    // --- ОНОВЛЕНО ПІД НОВУ СТРУКТУРУ БАКА ---
     tank_model_id: tank.tank_model_id ? parseInt(tank.tank_model_id) : null,
     tank_volume:
       tank.tank_volume !== '' && tank.tank_volume !== null
@@ -42,28 +46,19 @@ const preparePayload = formData => ({
         : null,
     notes: tank.notes || '',
     photo_paths: tank.photo_paths || [],
-  })),
+  }));
 
-  trackers_data: (formData.trackers_data || []).map(tracker => ({
-    id:
-      tracker.id !== undefined && tracker.id !== null ? String(tracker.id) : '',
-    tracker_model: tracker.tracker_model || '',
-    tracker_imei: tracker.tracker_imei || '',
-    tracker_serial: tracker.tracker_serial || '',
-    sim_operator: tracker.sim_operator || '',
-    sim_number: tracker.sim_number || '',
-    installation_location: tracker.installation_location || '',
-  })),
-
-  drps_data: (formData.drps_data || []).map(lls => ({
+  payload.drps_data = (formData.drps_data || []).map(lls => ({
     id: lls.id !== undefined && lls.id !== null ? String(lls.id) : '',
     drp_type: lls.drp_type || '',
     drp_height: lls.drp_height ? parseFloat(lls.drp_height) : null,
     tank_id: String(lls.tank_id || 1),
     serial_number: lls.serial_number || '',
     connection_type: lls.connection_type || '',
-  })),
-});
+  }));
+
+  return payload;
+};
 
 export const vehiclesApi = {
   getAll: async () => {
@@ -108,14 +103,13 @@ export const vehiclesApi = {
     return response.data.map(item => ({ value: item.name, label: item.name }));
   },
 
-  // === НОВИЙ МЕТОД: ЗАВАНТАЖЕННЯ ФОТО БАКА ===
   uploadTankPhoto: async file => {
     const formData = new FormData();
     formData.append('file', file);
     const response = await axios.post(`${BASE_URL}upload/photo`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return response.data; // Поверне { photo_path: "/uploads/photos/..." }
+    return response.data;
   },
 
   uploadTareFile: async (
@@ -127,10 +121,7 @@ export const vehiclesApi = {
   ) => {
     const formData = new FormData();
     formData.append('file', file);
-
-    if (tankIndex !== null) {
-      formData.append('tank_index', tankIndex);
-    }
+    if (tankIndex !== null) formData.append('tank_index', tankIndex);
     formData.append('file_type', fileType);
     formData.append('no_neck_access', noNeckAccess);
 
@@ -138,15 +129,12 @@ export const vehiclesApi = {
       `${BASE_URL}${vehicleId}/upload-tare/`,
       formData,
       {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       }
     );
     return response.data;
   },
 
-  // Оновлення ТАР-файлу (тепер приймає будь-які дані: h1, h2, is_etalon, vehicle_id=null)
   updateTareFileData: async (fileId, data) => {
     const response = await axios.put(`${BASE_URL}files/${fileId}/`, data);
     return response.data;
@@ -177,9 +165,44 @@ export const vehiclesApi = {
     return response.data;
   },
 
-  // === НОВИЙ МЕТОД: ОТРИМАННЯ АРХІВУ ФАЙЛІВ ===
   getArchiveFiles: async () => {
     const response = await axios.get(`${BASE_URL}archive/files/`);
+    return response.data;
+  },
+
+  // === НОВІ МЕТОДИ ДЛЯ ТРЕКЕРІВ ТА СІМ-КАРТ ===
+  getInventoryTrackers: async () => {
+    const response = await axios.get(`${BASE_URL}archive/trackers/`);
+    return response.data;
+  },
+  createTracker: async data => {
+    const response = await axios.post(`${BASE_URL}trackers/`, data);
+    return response.data;
+  },
+  assignTracker: async (trackerId, vehicleId) => {
+    const response = await axios.post(
+      `${BASE_URL}trackers/${trackerId}/assign/${vehicleId}`
+    );
+    return response.data;
+  },
+  removeTracker: async trackerId => {
+    const response = await axios.post(
+      `${BASE_URL}trackers/${trackerId}/remove`
+    );
+    return response.data;
+  },
+  getInventorySims: async () => {
+    const response = await axios.get(`${BASE_URL}archive/sim-cards/`);
+    return response.data;
+  },
+  createSimCard: async data => {
+    const response = await axios.post(`${BASE_URL}sim-cards/`, data);
+    return response.data;
+  },
+  assignSimCard: async (simId, trackerId) => {
+    const response = await axios.post(
+      `${BASE_URL}sim-cards/${simId}/assign/${trackerId}`
+    );
     return response.data;
   },
 };

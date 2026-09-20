@@ -19,7 +19,8 @@ import {
 import { vehiclesApi } from '../../../services/vehiclesApi';
 import { TareConverterModal } from '../TareConverterModal/TareConverterModal';
 import { Tank3DViewer } from '../../tanksCatalog/Tank3DViewer/Tank3DViewer';
-
+import { TrackerModal } from '../../../features/TrackerModal/TrackerModal';
+import { HardDrive } from 'lucide-react'; // Додай іконку
 import {
   Card,
   CardHeader,
@@ -32,6 +33,7 @@ import {
 } from './VehicleCard.styled';
 
 export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
+  const [isTrackerModalOpen, setIsTrackerModalOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [tankIndex, setTankIndex] = useState(0);
   const [trackerIndex, setTrackerIndex] = useState(0);
@@ -46,7 +48,7 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
   const [photoIndex, setPhotoIndex] = useState(0);
 
   const tanks = vehicle.tanks_data || [];
-  const trackers = vehicle.trackers_data || [];
+  const trackers = vehicle.trackers || [];
   const drps = vehicle.drps_data || [];
   const otherEquipmentList = vehicle.other_equipment
     ? vehicle.other_equipment
@@ -518,7 +520,34 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
             </div>
 
             <div>
-              <SectionTitle>GPS Трекери ({trackers.length})</SectionTitle>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <SectionTitle>GPS Трекери ({trackers.length})</SectionTitle>
+                <button
+                  onClick={() => setIsTrackerModalOpen(true)}
+                  style={{
+                    background: '#eff6ff',
+                    color: '#2563eb',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  <HardDrive size={14} /> Управління
+                </button>
+              </div>
+
               {trackers.length > 0 ? (
                 <div style={sliderBoxStyle}>
                   <div
@@ -528,7 +557,7 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
                       alignItems: 'center',
                     }}
                   >
-                    <strong>{trackers[trackerIndex].tracker_model}</strong>
+                    <strong>{trackers[trackerIndex].model}</strong>
                     {trackers.length > 1 && (
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
@@ -555,8 +584,13 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
                     )}
                   </div>
                   <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                    IMEI: {trackers[trackerIndex].tracker_imei}
+                    IMEI: {trackers[trackerIndex].imei}
                   </div>
+                  {trackers[trackerIndex].sim_cards?.length > 0 && (
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                      SIM: {trackers[trackerIndex].sim_cards[0].phone_number}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Field>Немає трекерів</Field>
@@ -841,6 +875,13 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
             </div>
           </div>
         </div>
+      )}
+      {isTrackerModalOpen && (
+        <TrackerModal
+          vehicle={vehicle}
+          onClose={() => setIsTrackerModalOpen(false)}
+          onUpdate={onUpdate}
+        />
       )}
     </>
   );
