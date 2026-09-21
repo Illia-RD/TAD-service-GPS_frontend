@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GeneralInfo } from './GeneralInfo/GeneralInfo';
 import { TanksSection } from './TanksSection/TanksSection';
+import { TrackersSection } from './TrackersSection/TrackersSection';
 import { LLSSection } from './LlsSection/LlsSection';
 import { OtherEquipment } from './OtherEquipment/OtherEquipment';
 
@@ -27,12 +28,15 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
     group_name: '',
     status: 'connected',
     other_equipment: '',
+    trackers_data: [],
     tanks_data: [],
     drps_data: [],
     notes: '',
   });
 
   const [dicts, setDicts] = useState({
+    trackerModels: [],
+    simOperators: [],
     drpTypes: [],
     makes: [],
     models: [],
@@ -40,7 +44,6 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
     groups: [],
     otherEquipment: [],
   });
-
   const [isLoadingDicts, setIsLoadingDicts] = useState(true);
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
         : {
             tanks_data: [],
             drps_data: [],
+            trackers_data: [],
             other_equipment: '',
             status: 'connected',
           }
@@ -64,17 +68,39 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
     const fetchDictionaries = async () => {
       setIsLoadingDicts(true);
       try {
-        const [drps, makes, models, euros, groups, uniqueEquipment] =
-          await Promise.all([
-            api.drpTypes.getAll(),
-            api.makes.getAll(),
-            api.models.getAll(),
-            api.euroStandards.getAll(),
-            api.groups.getAll(),
-            vehiclesApi.getUniqueOtherEquipment(),
-          ]);
+        // ЗАХИСТ ВІД 404: Якщо якийсь довідник падає, повертаємо пустий масив і не ламаємо форму!
+        const safeFetch = promise =>
+          promise.catch(err => {
+            console.warn(
+              'Один із довідників не завантажився (можливо 404):',
+              err.message
+            );
+            return [];
+          });
+
+        const [
+          trackers,
+          sims,
+          drps,
+          makes,
+          models,
+          euros,
+          groups,
+          uniqueEquipment,
+        ] = await Promise.all([
+          safeFetch(api.trackerModels.getAll()),
+          safeFetch(api.simOperators.getAll()),
+          safeFetch(api.drpTypes.getAll()),
+          safeFetch(api.makes.getAll()),
+          safeFetch(api.models.getAll()),
+          safeFetch(api.euroStandards.getAll()),
+          safeFetch(api.groups.getAll()),
+          safeFetch(vehiclesApi.getUniqueOtherEquipment()),
+        ]);
 
         setDicts({
+          trackerModels: trackers.map(t => ({ value: t.name, label: t.name })),
+          simOperators: sims.map(s => ({ value: s.name, label: s.name })),
           drpTypes: drps.map(d => ({ value: d.name, label: d.name })),
           makes: makes.map(m => ({ value: m.name, label: m.name })),
           models: models.map(m => ({ value: m.name, label: m.name })),
@@ -101,19 +127,12 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
     const defaultData = {
       tanks_data: [],
       drps_data: [],
+      trackers_data: [],
       other_equipment: '',
       status: 'connected',
     };
-    // Видаляємо trackers з перевірки на зміни
-    const currentDataForCheck = { ...formData };
-    delete currentDataForCheck.trackers;
-
-    const initialDataForCheck = initialData ? { ...initialData } : defaultData;
-    delete initialDataForCheck.trackers;
-
     const hasChanges =
-      JSON.stringify(currentDataForCheck) !==
-      JSON.stringify(initialDataForCheck);
+      JSON.stringify(formData) !== JSON.stringify(initialData || defaultData);
 
     if (hasChanges) {
       const confirmDiscard = window.confirm(
@@ -144,7 +163,7 @@ export const VehicleForm = ({ initialData, onSubmit, onCancelEdit }) => {
       <form onSubmit={handleSubmit}>
         <GeneralInfo {...sectionProps} />
         <TanksSection formData={formData} setFormData={setFormData} />
-        {/* TrackersSection ВИДАЛЕНО */}
+        <TrackersSection {...sectionProps} />
         <LLSSection {...sectionProps} />
 
         <OtherEquipment

@@ -7,14 +7,14 @@ export const Overlay = styled.div`
   right: 0;
   bottom: 0;
   background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
+  z-index: 10000;
 `;
 
-export const ModalContainer = styled.div`
+export const ModalBox = styled.div`
   background: white;
   border-radius: 12px;
   width: 450px;
@@ -31,14 +31,7 @@ export const CloseBtn = styled.button`
   border: none;
   cursor: pointer;
   color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border-radius: 4px;
-
   &:hover {
-    background: #f1f5f9;
     color: #0f172a;
   }
 `;
@@ -66,13 +59,8 @@ export const TabBtn = styled.button`
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s;
   background: ${({ $active }) => ($active ? '#eff6ff' : 'transparent')};
   color: ${({ $active }) => ($active ? '#2563eb' : '#64748b')};
-
-  &:hover {
-    background: ${({ $active }) => ($active ? '#eff6ff' : '#f8fafc')};
-  }
 `;
 
 export const FormGroup = styled.div`
@@ -83,7 +71,6 @@ export const Row = styled.div`
   display: flex;
   gap: 12px;
   margin-bottom: 12px;
-
   > div {
     flex: 1;
   }
@@ -103,13 +90,10 @@ export const Input = styled.input`
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
   box-sizing: border-box;
-
+  outline: none;
   &:focus {
     border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
   }
 `;
 
@@ -119,19 +103,18 @@ export const Select = styled.select`
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   font-size: 14px;
+  box-sizing: border-box;
   outline: none;
   background: white;
-  box-sizing: border-box;
-
   &:focus {
     border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
   }
 `;
 
 export const ActionButton = styled.button`
   width: 100%;
   padding: 10px;
+  margin-top: 10px;
   background: ${({ $color }) => $color || '#3b82f6'};
   color: white;
   border: none;
@@ -143,15 +126,8 @@ export const ActionButton = styled.button`
   gap: 6px;
   font-weight: 500;
   font-size: 14px;
-  margin-top: 20px;
-  transition: background 0.2s;
-
-  &:hover {
-    filter: brightness(0.9);
-  }
-
   &:disabled {
     opacity: 0.7;
-    cursor: not-allowed;
+    cursor: wait;
   }
 `;

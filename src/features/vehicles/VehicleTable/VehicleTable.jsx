@@ -13,14 +13,11 @@ import {
   Wrench,
   Activity,
   Banknote,
+  HardDrive,
 } from 'lucide-react';
-import { TrackerModal } from '../../../features/TrackerModal/TrackerModal';
-import { HardDrive } from 'lucide-react';
 import { vehiclesApi } from '../../../services/vehiclesApi';
 import { TareConverterModal } from '../TareConverterModal/TareConverterModal';
-// УВАГА: Перевір цей шлях, він має вести до твого нового компонента 3D!
 import { Tank3DViewer } from '../../tanksCatalog/Tank3DViewer/Tank3DViewer';
-
 import {
   TableContainer,
   Table,
@@ -33,19 +30,12 @@ import {
 } from './VehicleTable.styled';
 
 export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
-  const [trackerModalVehicle, setTrackerModalVehicle] = useState(null);
   const [localFiles, setLocalFiles] = useState({});
   const [isUploading, setIsUploading] = useState({});
-
-  // Стейт для слайдерів у таблиці
   const [tankIndices, setTankIndices] = useState({});
   const [trackerIndices, setTrackerIndices] = useState({});
   const [drpIndices, setDrpIndices] = useState({});
-
-  // Стейт для Конвертера
   const [converterData, setConverterData] = useState(null);
-
-  // Стейт для Галереї бака (3D + Фото)
   const [viewingTank, setViewingTank] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
 
@@ -59,27 +49,14 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
     setIndicesObj(prev => ({ ...prev, [id]: next }));
   };
 
-  // Розрахунок деформації (+/-)
   const calculateDeformation = (nominal, actual) => {
-    if (
-      nominal === undefined ||
-      actual === undefined ||
-      nominal === '' ||
-      actual === '' ||
-      nominal === null ||
-      actual === null
-    )
-      return null;
+    if (!nominal || !actual) return null;
     const nom = parseFloat(nominal);
     const act = parseFloat(actual);
     if (isNaN(nom) || isNaN(act) || nom === 0) return null;
-
     const diff = act - nom;
     const percent = ((diff / nom) * 100).toFixed(1);
-    return {
-      diff,
-      percent: parseFloat(percent),
-    };
+    return { diff, percent: parseFloat(percent) };
   };
 
   const getStatusStyles = status => {
@@ -89,7 +66,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
       icon: <CheckCircle size={14} />,
     };
     if (!status) return defaultStyle;
-
     const s = status.toLowerCase().trim();
     if (s.includes('відключено') || s.includes('disconnected'))
       return { bg: '#fee2e2', text: '#991b1b', icon: <XCircle size={14} /> };
@@ -105,7 +81,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
       return { bg: '#d1fae5', text: '#047857', icon: <Banknote size={14} /> };
     if (s.includes('тест') || s.includes('test'))
       return { bg: '#dbeafe', text: '#1e40af', icon: <Activity size={14} /> };
-
     return defaultStyle;
   };
 
@@ -122,7 +97,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
         file,
         tankIndex
       );
-
       const vehicle = vehicles.find(v => v.id === vehicleId);
       if (vehicle) {
         if (!vehicle.files) vehicle.files = [];
@@ -133,9 +107,7 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
         [vehicleId]: [...(vehicle?.files || [])],
       }));
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.detail || 'Помилка завантаження файлу';
-      alert(errorMsg);
+      alert(err.response?.data?.detail || 'Помилка завантаження файлу');
     } finally {
       setIsUploading(prev => ({
         ...prev,
@@ -175,7 +147,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
         tankIndex
       );
       await vehiclesApi.deleteTareFile(oldFileId);
-
       const vehicle = vehicles.find(v => v.id === vehicleId);
       if (vehicle && vehicle.files) {
         vehicle.files = vehicle.files.filter(f => f.id !== oldFileId);
@@ -186,8 +157,7 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
         [vehicleId]: [...(vehicle?.files || [])],
       }));
     } catch (err) {
-      const errorMsg = err.response?.data?.detail || 'Помилка заміни файлу';
-      alert(errorMsg);
+      alert(err.response?.data?.detail || 'Помилка заміни файлу');
     } finally {
       setIsUploading(prev => ({
         ...prev,
@@ -195,10 +165,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
       }));
       if (e.target) e.target.value = null;
     }
-  };
-
-  const handlePreview = (file, vehicle) => {
-    setConverterData({ file, vehicle });
   };
 
   if (!vehicles || vehicles.length === 0) {
@@ -215,7 +181,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
     display: 'flex',
     alignItems: 'center',
   };
-
   const tableNavBtnStyle = {
     background: 'white',
     border: '1px solid #cbd5e1',
@@ -258,21 +223,18 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
               const statusStyle = getStatusStyles(vehicle.status);
               const vehicleFiles =
                 localFiles[vehicle.id] || vehicle.files || [];
-
               const tanks = vehicle.tanks_data || [];
               const tIdx = getIndex(tankIndices, vehicle.id);
               const activeTank = tanks[tIdx];
-              const trackers = vehicle.trackers || []; // Реальний масив об'єктів
+              const trackers = vehicle.trackers || [];
               const trIdx = getIndex(trackerIndices, vehicle.id);
               const activeTracker = trackers[trIdx];
-
               const drps = vehicle.drps_data || [];
               const dIdx = getIndex(drpIndices, vehicle.id);
               const activeDrp = drps[dIdx];
 
               return (
                 <Tr key={vehicle.id}>
-                  {/* ІДЕНТИФІКАЦІЯ */}
                   <Td className="sticky-left">
                     <strong style={{ display: 'block', fontSize: '14px' }}>
                       #{vehicle.internal_id || '—'} | {vehicle.plate || '—'}
@@ -294,7 +256,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                     </div>
                   </Td>
 
-                  {/* СТАТУС / ГРУПА */}
                   <Td>
                     <div style={{ marginBottom: '8px' }}>
                       <StatusBadge
@@ -322,7 +283,7 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                     </span>
                   </Td>
 
-                  {/* ТРЕКЕРИ */}
+                  {/* ТРЕКЕРИ - Без зайвих кнопок */}
                   <Td>
                     {trackers.length > 0 ? (
                       <StackedItem
@@ -402,40 +363,10 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                         </div>
                       </StackedItem>
                     ) : (
-                      <div
-                        style={{
-                          color: '#94a3b8',
-                          fontSize: '12px',
-                          marginBottom: '6px',
-                        }}
-                      >
-                        —
-                      </div>
+                      <span style={{ color: '#94a3b8' }}>—</span>
                     )}
-
-                    <button
-                      onClick={() => setTrackerModalVehicle(vehicle)}
-                      style={{
-                        width: '100%',
-                        marginTop: '6px',
-                        background: '#eff6ff',
-                        color: '#2563eb',
-                        border: '1px dashed #bfdbfe',
-                        borderRadius: '6px',
-                        padding: '4px',
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <HardDrive size={12} /> Управління
-                    </button>
                   </Td>
 
-                  {/* БАКИ ТА ФАЙЛИ СЛАЙДЕРОМ */}
                   <Td>
                     {tanks.length > 0 ? (
                       <StackedItem
@@ -459,7 +390,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                           >
                             Бак #{tIdx + 1} ({tIdx + 1}/{tanks.length})
                           </strong>
-
                           <div
                             style={{
                               display: 'flex',
@@ -533,7 +463,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                             marginTop: '2px',
                           }}
                         >
-                          {/* ПОШУК НАЗВИ ТА ГАБАРИТІВ З КАТАЛОГУ */}
                           {(() => {
                             const model = tankModels?.find(
                               m => m.id === activeTank.tank_model_id
@@ -564,7 +493,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                               </div>
                             ) : null;
                           })()}
-
                           <div>
                             Паспорт:{' '}
                             <strong>{activeTank.tank_volume ?? '—'} л</strong>
@@ -573,7 +501,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                             Факт:{' '}
                             <strong>{activeTank.actual_volume ?? '—'} л</strong>
                           </div>
-
                           {(() => {
                             const def = calculateDeformation(
                               activeTank.tank_volume,
@@ -596,8 +523,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                               </div>
                             );
                           })()}
-
-                          {/* ЯВНІ КНОПКИ ДЛЯ 3D ТА ФОТО */}
                           <div
                             style={{
                               display: 'flex',
@@ -606,12 +531,11 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                               flexWrap: 'wrap',
                             }}
                           >
-                            {/* Кнопка 3D Моделі */}
                             {(() => {
                               const model = tankModels?.find(
                                 m => m.id === activeTank.tank_model_id
                               );
-                              if (model) {
+                              if (model)
                                 return (
                                   <button
                                     type="button"
@@ -634,16 +558,12 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                                       cursor: 'pointer',
                                       fontWeight: '500',
                                     }}
-                                    title="Відкрити 3D модель"
                                   >
                                     🧊 3D
                                   </button>
                                 );
-                              }
                               return null;
                             })()}
-
-                            {/* Кнопка Фото */}
                             {activeTank.photo_paths &&
                               activeTank.photo_paths.length > 0 && (
                                 <button
@@ -667,14 +587,13 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                                     cursor: 'pointer',
                                     fontWeight: '500',
                                   }}
-                                  title="Відкрити фотографії"
                                 >
                                   📷 {activeTank.photo_paths.length} фото
                                 </button>
                               )}
                           </div>
                         </div>
-                        {/* СПИСОК ФАЙЛІВ ТАРУВАННЯ */}
+
                         {vehicleFiles.filter(f => f.tank_index === tIdx)
                           .length > 0 && (
                           <div
@@ -716,16 +635,14 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                                   </span>
                                   <div style={{ display: 'flex', gap: '2px' }}>
                                     <button
-                                      onClick={() => handlePreview(f, vehicle)}
+                                      onClick={() =>
+                                        setConverterData({ file: f, vehicle })
+                                      }
                                       style={iconBtnStyle}
-                                      title="Відкрити Тарування"
                                     >
                                       <Eye size={12} color="#3b82f6" />
                                     </button>
-                                    <label
-                                      style={iconBtnStyle}
-                                      title="Замінити"
-                                    >
+                                    <label style={iconBtnStyle}>
                                       <input
                                         type="file"
                                         hidden
@@ -750,7 +667,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                                         ...iconBtnStyle,
                                         color: '#64748b',
                                       }}
-                                      title="Скачати CSV"
                                     >
                                       <Download size={12} />
                                     </a>
@@ -759,7 +675,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                                         handleDeleteFile(vehicle.id, f.id)
                                       }
                                       style={iconBtnStyle}
-                                      title="Видалити"
                                     >
                                       <Trash2 size={12} color="#ef4444" />
                                     </button>
@@ -774,7 +689,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                     )}
                   </Td>
 
-                  {/* ДАТЧИКИ LLS */}
                   <Td>
                     {drps.length > 0 ? (
                       <StackedItem
@@ -857,7 +771,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                     )}
                   </Td>
 
-                  {/* ОБЛАДНАННЯ */}
                   <Td style={{ maxWidth: '180px' }}>
                     {vehicle.other_equipment ? (
                       <span
@@ -874,7 +787,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                     )}
                   </Td>
 
-                  {/* ПРИМІТКИ */}
                   <Td style={{ maxWidth: '200px' }}>
                     {vehicle.notes ? (
                       <div
@@ -895,7 +807,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                     )}
                   </Td>
 
-                  {/* ДІЇ */}
                   <Td
                     className="sticky-right"
                     style={{ textAlign: 'center', verticalAlign: 'middle' }}
@@ -929,7 +840,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
         </Table>
       </TableContainer>
 
-      {/* МОДАЛКА: ТАРУВАННЯ */}
       {converterData && (
         <TareConverterModal
           file={converterData.file}
@@ -951,7 +861,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
         />
       )}
 
-      {/* === МОДАЛКА: 3D МОДЕЛЬ ТА ФОТОГАЛЕРЕЯ === */}
       {viewingTank && (
         <div
           style={{
@@ -984,7 +893,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Хедер модалки */}
             <div
               style={{
                 display: 'flex',
@@ -1009,8 +917,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                 <XCircle size={24} />
               </button>
             </div>
-
-            {/* Тіло модалки */}
             <div
               style={{
                 display: 'flex',
@@ -1019,7 +925,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                 padding: '24px',
               }}
             >
-              {/* ЛІВА ЧАСТИНА: 3D В'ЮВЕР */}
               <div style={{ flex: '1 1 300px', minWidth: '300px' }}>
                 <h4
                   style={{
@@ -1049,8 +954,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                   </div>
                 )}
               </div>
-
-              {/* ПРАВА ЧАСТИНА: СЛАЙДЕР ФОТО */}
               <div
                 style={{
                   flex: '1 1 400px',
@@ -1069,7 +972,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                 >
                   Фотографії монтажу
                 </h4>
-
                 {viewingTank.tank.photo_paths &&
                 viewingTank.tank.photo_paths.length > 0 ? (
                   <div
@@ -1093,8 +995,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
                         objectFit: 'contain',
                       }}
                     />
-
-                    {/* Кнопки керування слайдером */}
                     {viewingTank.tank.photo_paths.length > 1 && (
                       <div
                         style={{
@@ -1173,13 +1073,6 @@ export const VehicleTable = ({ vehicles, tankModels, onEdit, onDelete }) => {
             </div>
           </div>
         </div>
-      )}
-      {trackerModalVehicle && (
-        <TrackerModal
-          vehicle={trackerModalVehicle}
-          onClose={() => setTrackerModalVehicle(null)}
-          onUpdate={onUpdate}
-        />
       )}
     </>
   );

@@ -15,12 +15,11 @@ import {
   XCircle,
   Activity,
   Banknote,
+  HardDrive,
 } from 'lucide-react';
 import { vehiclesApi } from '../../../services/vehiclesApi';
 import { TareConverterModal } from '../TareConverterModal/TareConverterModal';
 import { Tank3DViewer } from '../../tanksCatalog/Tank3DViewer/Tank3DViewer';
-import { TrackerModal } from '../../../features/TrackerModal/TrackerModal';
-import { HardDrive } from 'lucide-react'; // Додай іконку
 import {
   Card,
   CardHeader,
@@ -33,17 +32,13 @@ import {
 } from './VehicleCard.styled';
 
 export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
-  const [isTrackerModalOpen, setIsTrackerModalOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [tankIndex, setTankIndex] = useState(0);
   const [trackerIndex, setTrackerIndex] = useState(0);
   const [drpIndex, setDrpIndex] = useState(0);
-
   const [files, setFiles] = useState(vehicle.files || []);
   const [isUploading, setIsUploading] = useState(false);
   const [converterData, setConverterData] = useState(null);
-
-  // Стан для Галереї (3D + Фото)
   const [viewingTank, setViewingTank] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
 
@@ -83,17 +78,6 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
   };
 
   const statusStyle = getStatusStyles(vehicle.status);
-
-  const calculateDeformation = (nominal, actual) => {
-    if (!nominal || !actual) return null;
-    const nom = parseFloat(nominal);
-    const act = parseFloat(actual);
-    if (isNaN(nom) || isNaN(act) || nom === 0) return null;
-    const diff = act - nom;
-    const percent = ((diff / nom) * 100).toFixed(1);
-    return { diff, percent: parseFloat(percent) };
-  };
-
   const sliderBoxStyle = {
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
@@ -167,29 +151,6 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
       setFiles([...(vehicle.files || [])]);
     } catch (err) {
       alert('Помилка видалення.');
-    }
-  };
-
-  const handleReplaceFile = async (oldFileId, tankIdx, e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      setIsUploading(true);
-      const newFileResult = await vehiclesApi.uploadTareFile(
-        vehicle.id,
-        file,
-        tankIdx
-      );
-      await vehiclesApi.deleteTareFile(oldFileId);
-      if (vehicle.files) {
-        vehicle.files = vehicle.files.filter(f => f.id !== oldFileId);
-        vehicle.files.push(newFileResult);
-      }
-      setFiles([...(vehicle.files || [])]);
-    } catch (err) {
-      alert('Помилка заміни.');
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -301,7 +262,6 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
                       marginBottom: '8px',
                     }}
                   >
-                    {/* НАЗВА БАКА З КАТАЛОГУ */}
                     {(() => {
                       const activeTank = tanks[tankIndex];
                       const model = tankModels?.find(
@@ -325,7 +285,6 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
                         </div>
                       );
                     })()}
-
                     {tanks.length > 1 && (
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
@@ -351,167 +310,11 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
                       </div>
                     )}
                   </div>
-
                   <div style={{ fontSize: '13px', color: '#334155' }}>
                     Паспорт:{' '}
                     <strong>{tanks[tankIndex].tank_volume ?? '—'} л</strong> |
                     Факт:{' '}
                     <strong>{tanks[tankIndex].actual_volume ?? '—'} л</strong>
-                  </div>
-
-                  {/* КНОПКИ ДЛЯ 3D ТА ФОТО */}
-                  {(() => {
-                    const activeTank = tanks[tankIndex];
-                    const model = tankModels?.find(
-                      m => m.id === activeTank.tank_model_id
-                    );
-                    const hasPhotos =
-                      activeTank.photo_paths &&
-                      activeTank.photo_paths.length > 0;
-
-                    if (!model && !hasPhotos) return null;
-
-                    return (
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: '8px',
-                          marginTop: '8px',
-                        }}
-                      >
-                        {model && (
-                          <button
-                            onClick={() => {
-                              setViewingTank({ tank: activeTank, model });
-                              setPhotoIndex(0);
-                            }}
-                            style={{
-                              background: '#e0e7ff',
-                              color: '#3730a3',
-                              border: '1px solid #c7d2fe',
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '500',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            🧊 3D Модель
-                          </button>
-                        )}
-                        {hasPhotos && (
-                          <button
-                            onClick={() => {
-                              setViewingTank({ tank: activeTank, model });
-                              setPhotoIndex(0);
-                            }}
-                            style={{
-                              background: '#f1f5f9',
-                              color: '#334155',
-                              border: '1px solid #cbd5e1',
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '500',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            📷 {activeTank.photo_paths.length} фото
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  <div
-                    style={{
-                      marginTop: '12px',
-                      borderTop: '1px solid #e2e8f0',
-                      paddingTop: '8px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '6px',
-                      }}
-                    >
-                      <span style={{ fontSize: '12px', fontWeight: '600' }}>
-                        Файли тарування:
-                      </span>
-                      <label
-                        style={{
-                          cursor: isUploading ? 'wait' : 'pointer',
-                          color: '#2563eb',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <input
-                          type="file"
-                          hidden
-                          onChange={e => handleFileChange(e, tankIndex)}
-                          accept=".csv, .txt, .xls, .xlsx"
-                          disabled={isUploading}
-                        />
-                        <Upload size={12} /> Додати
-                      </label>
-                    </div>
-                    {files
-                      .filter(f => f.tank_index === tankIndex)
-                      .map(f => (
-                        <div
-                          key={f.id}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            background: 'white',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #cbd5e1',
-                            marginBottom: '4px',
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: '12px',
-                              maxWidth: '100px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {f.file_name}
-                          </span>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button
-                              onClick={() =>
-                                setConverterData({ file: f, vehicle })
-                              }
-                              style={iconBtnStyle}
-                            >
-                              <Eye size={14} color="#3b82f6" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteFile(f.id)}
-                              style={iconBtnStyle}
-                            >
-                              <Trash2 size={14} color="#ef4444" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
                   </div>
                 </div>
               ) : (
@@ -520,34 +323,7 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
             </div>
 
             <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <SectionTitle>GPS Трекери ({trackers.length})</SectionTitle>
-                <button
-                  onClick={() => setIsTrackerModalOpen(true)}
-                  style={{
-                    background: '#eff6ff',
-                    color: '#2563eb',
-                    border: '1px solid #bfdbfe',
-                    borderRadius: '6px',
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    cursor: 'pointer',
-                    fontWeight: 500,
-                  }}
-                >
-                  <HardDrive size={14} /> Управління
-                </button>
-              </div>
-
+              <SectionTitle>GPS Трекери ({trackers.length})</SectionTitle>
               {trackers.length > 0 ? (
                 <div style={sliderBoxStyle}>
                   <div
@@ -557,7 +333,16 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
                       alignItems: 'center',
                     }}
                   >
-                    <strong>{trackers[trackerIndex].model}</strong>
+                    <strong
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <HardDrive size={14} color="#3b82f6" />{' '}
+                      {trackers[trackerIndex].model}
+                    </strong>
                     {trackers.length > 1 && (
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
@@ -659,7 +444,7 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
                 </div>
               </div>
             )}
-            {/* === ПРИМІТКИ === */}
+
             {vehicle.notes && (
               <div>
                 <SectionTitle>Примітка</SectionTitle>
@@ -682,207 +467,6 @@ export const VehicleCard = ({ vehicle, tankModels, onEdit, onDelete }) => {
           </DetailsSection>
         )}
       </Card>
-
-      {/* МОДАЛКА КОНВЕРТЕРА */}
-      {converterData && (
-        <TareConverterModal
-          file={converterData.file}
-          vehicle={converterData.vehicle}
-          onClose={() => setConverterData(null)}
-          onUpdateFile={updatedFile => {
-            setFiles(prev =>
-              prev.map(f => (f.id === updatedFile.id ? updatedFile : f))
-            );
-            setConverterData(prev => ({ ...prev, file: updatedFile }));
-          }}
-        />
-      )}
-
-      {/* === МОДАЛКА: 3D МОДЕЛЬ ТА ФОТОГАЛЕРЕЯ (Мобільна адаптація) === */}
-      {viewingTank && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 10000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-          }}
-          onClick={() => setViewingTank(null)}
-        >
-          <div
-            style={{
-              background: 'white',
-              borderRadius: '12px',
-              width: '100%',
-              maxWidth: '500px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '16px 20px',
-                borderBottom: '1px solid #e2e8f0',
-              }}
-            >
-              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '16px' }}>
-                {viewingTank.model ? viewingTank.model.name : 'Деталі бака'}
-              </h3>
-              <button
-                onClick={() => setViewingTank(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#64748b',
-                }}
-              >
-                <XCircle size={24} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                padding: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '20px',
-              }}
-            >
-              {/* 3D В'ЮВЕР */}
-              {viewingTank.model && (
-                <div>
-                  <h4
-                    style={{
-                      marginTop: 0,
-                      marginBottom: '8px',
-                      color: '#475569',
-                      fontSize: '14px',
-                    }}
-                  >
-                    3D Модель (можна крутити)
-                  </h4>
-                  <Tank3DViewer tankModel={viewingTank.model} />
-                </div>
-              )}
-
-              {/* СЛАЙДЕР ФОТО */}
-              {viewingTank.tank.photo_paths &&
-                viewingTank.tank.photo_paths.length > 0 && (
-                  <div>
-                    <h4
-                      style={{
-                        marginTop: 0,
-                        marginBottom: '8px',
-                        color: '#475569',
-                        fontSize: '14px',
-                      }}
-                    >
-                      Фотографії монтажу
-                    </h4>
-                    <div
-                      style={{
-                        background: '#0f172a',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <img
-                        src={`http://127.0.0.1:8000${viewingTank.tank.photo_paths[photoIndex].replace(/\\/g, '/')}`}
-                        alt="Бак"
-                        style={{
-                          width: '100%',
-                          height: '250px',
-                          objectFit: 'contain',
-                        }}
-                      />
-                      {viewingTank.tank.photo_paths.length > 1 && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            bottom: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '16px',
-                            background: 'rgba(0,0,0,0.6)',
-                            padding: '6px 12px',
-                            borderRadius: '20px',
-                            color: 'white',
-                          }}
-                        >
-                          <button
-                            onClick={() =>
-                              setPhotoIndex(p =>
-                                p > 0
-                                  ? p - 1
-                                  : viewingTank.tank.photo_paths.length - 1
-                              )
-                            }
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'white',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <ChevronLeft size={20} />
-                          </button>
-                          <span style={{ fontSize: '14px', fontWeight: '500' }}>
-                            {photoIndex + 1} /{' '}
-                            {viewingTank.tank.photo_paths.length}
-                          </span>
-                          <button
-                            onClick={() =>
-                              setPhotoIndex(p =>
-                                p < viewingTank.tank.photo_paths.length - 1
-                                  ? p + 1
-                                  : 0
-                              )
-                            }
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'white',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <ChevronRight size={20} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-            </div>
-          </div>
-        </div>
-      )}
-      {isTrackerModalOpen && (
-        <TrackerModal
-          vehicle={vehicle}
-          onClose={() => setIsTrackerModalOpen(false)}
-          onUpdate={onUpdate}
-        />
-      )}
     </>
   );
 };

@@ -1,280 +1,283 @@
-import React, { useEffect, useState } from 'react';
-import CreatableSelect from 'react-select/creatable';
-import { dictionariesApi as api } from '../../../../services/dictionariesApi';
+import React, { useState } from 'react';
+import {
+  HardDrive,
+  CreditCard,
+  Plus,
+  Unlink,
+  SmartphoneNfc,
+  Info,
+} from 'lucide-react';
 import {
   SectionContainer,
   SectionHeader,
-  SectionTitle,
-  TabsHeader,
-  TabButton,
-  AddTabButton,
-  TabContent,
-  TabContentHeader,
-  FormGroup,
-  Label,
-  Input,
-  Button,
-  RemoveButton,
+  TrackerItemBox,
+  AddButton,
+  RemoveBtn,
 } from './TrackersSection.styled';
+import { vehiclesApi } from '../../../../services/vehiclesApi';
+import {
+  TrackerManagerModal,
+  SimManagerModal,
+} from '../../../EquipmentModals/EquipmentModals';
 
-export const TrackersSection = ({
-  formData,
-  setFormData,
-  dicts,
-  setDicts,
-  isLoadingDicts,
-}) => {
-  const [activeTab, setActiveTab] = useState(0);
+export const TrackersSection = ({ formData, setFormData, dicts }) => {
+  const [isTrackerModalOpen, setTrackerModalOpen] = useState(false);
+  const [activeTrackerForSim, setActiveTrackerForSim] = useState(null);
 
-  // Ініціалізуємо масив трекерів з ключем trackers_data
-  useEffect(() => {
-    if (!formData.trackers_data) {
-      setFormData(prev => ({ ...prev, trackers_data: [] }));
+  const trackers = formData.trackers || [];
+
+  const handleAddTracker = trackerObject => {
+    if (!trackers.find(t => String(t.id) === String(trackerObject.id))) {
+      setFormData({ ...formData, trackers: [...trackers, trackerObject] });
     }
-  }, [formData.trackers_data, setFormData]);
-
-  const trackersList = formData.trackers_data || [];
-
-  const handleAddTracker = () => {
-    setFormData(prev => ({
-      ...prev,
-      trackers_data: [
-        ...(prev.trackers_data || []),
-        {
-          id: '', // Було null, стало ""
-          tracker_model: '',
-          tracker_imei: '',
-          tracker_serial: '',
-          sim_operator: '',
-          sim_number: '',
-          installation_location: '',
-        },
-      ],
-    }));
-    setActiveTab(trackersList.length);
   };
 
-  const handleRemoveTracker = indexToRemove => {
-    setFormData(prev => ({
-      ...prev,
-      trackers_data: prev.trackers_data.filter(
-        (_, index) => index !== indexToRemove
-      ),
-    }));
-    setActiveTab(prev => Math.max(0, prev - 1));
+  const handleUnlinkTracker = index => {
+    const updated = [...trackers];
+    updated.splice(index, 1);
+    setFormData({ ...formData, trackers: updated });
   };
 
-  const handleChange = (index, field, value) => {
-    setFormData(prev => {
-      const updatedTrackers = [...prev.trackers_data];
-      updatedTrackers[index] = { ...updatedTrackers[index], [field]: value };
-      return { ...prev, trackers_data: updatedTrackers };
-    });
-  };
-
-  const handleSmartSelect = async (
-    newValue,
-    actionMeta,
-    index,
-    fieldName,
-    dictName,
-    apiDict
-  ) => {
-    if (actionMeta.action === 'create-option') {
-      try {
-        const created = await apiDict.create(newValue.value);
-        setDicts(prev => ({
-          ...prev,
-          [dictName]: [
-            ...(prev[dictName] || []),
-            { value: created.name, label: created.name },
-          ],
-        }));
-        handleChange(index, fieldName, created.name);
-      } catch (err) {
-        alert(`Помилка створення запису в довіднику`);
+  const handleSimAttached = (trackerId, simObject) => {
+    const updated = trackers.map(t => {
+      if (String(t.id) === String(trackerId)) {
+        return { ...t, sim_cards: [simObject] };
       }
-    } else if (newValue) {
-      handleChange(index, fieldName, newValue.value);
-    } else {
-      handleChange(index, fieldName, '');
+      return t;
+    });
+    setFormData({ ...formData, trackers: updated });
+  };
+
+  const handleUnlinkSim = async (trackerId, simId) => {
+    if (!window.confirm("Відв'язати СІМ-карту? Вона повернеться в архів."))
+      return;
+    try {
+      // Відправляємо запит на бекенд для моментальної відв'язки сімки
+      await vehiclesApi.removeSimCard(simId);
+      const updated = trackers.map(t => {
+        if (String(t.id) === String(trackerId)) {
+          return { ...t, sim_cards: [] };
+        }
+        return t;
+      });
+      setFormData({ ...formData, trackers: updated });
+    } catch (error) {
+      alert("Помилка відв'язки СІМ-карти");
     }
   };
-
-  const selectStyles = {
-    control: base => ({
-      ...base,
-      borderColor: '#cbd5e1',
-      borderRadius: '6px',
-      padding: '2px',
-      boxShadow: 'none',
-      boxSizing: 'border-box',
-      '&:hover': { borderColor: '#94a3b8' },
-    }),
-  };
-
-  if (trackersList.length === 0) {
-    return (
-      <SectionContainer>
-        <SectionHeader>
-          <SectionTitle>GPS Трекери</SectionTitle>
-        </SectionHeader>
-        <Button type="button" onClick={handleAddTracker}>
-          + Додати перший трекер
-        </Button>
-      </SectionContainer>
-    );
-  }
-
-  const activeTracker = trackersList[activeTab] || trackersList[0];
-  const actualTabIndex = trackersList[activeTab] ? activeTab : 0;
 
   return (
     <SectionContainer>
       <SectionHeader>
-        <SectionTitle>GPS Трекери</SectionTitle>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <HardDrive size={18} /> GPS Трекери ({trackers.length})
+        </div>
+        <AddButton type="button" onClick={() => setTrackerModalOpen(true)}>
+          <Plus size={16} /> Прив'язати трекер
+        </AddButton>
       </SectionHeader>
 
-      <TabsHeader>
-        {trackersList.map((_, index) => (
-          <TabButton
-            key={index}
-            type="button"
-            $active={actualTabIndex === index}
-            onClick={() => setActiveTab(index)}
-          >
-            Трекер #{index + 1}
-          </TabButton>
-        ))}
-        <AddTabButton type="button" onClick={handleAddTracker}>
-          + Додати
-        </AddTabButton>
-      </TabsHeader>
+      <div
+        style={{
+          background: '#fef3c7',
+          padding: '8px 16px',
+          fontSize: '12px',
+          color: '#92400e',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          borderBottom: '1px solid #fde68a',
+        }}
+      >
+        <Info size={14} /> Місце встановлення трекера на авто описуйте в полі
+        "Примітка" внизу форми.
+      </div>
 
-      <TabContent>
-        <TabContentHeader>
-          <h4>Дані трекера #{actualTabIndex + 1}</h4>
-          <RemoveButton
-            type="button"
-            onClick={() => handleRemoveTracker(actualTabIndex)}
-          >
-            Видалити цей трекер
-          </RemoveButton>
-        </TabContentHeader>
+      {trackers.map((tracker, index) => {
+        const sim =
+          tracker.sim_cards && tracker.sim_cards.length > 0
+            ? tracker.sim_cards[0]
+            : null;
 
-        <FormGroup>
-          <div>
-            <Label>Модель трекера</Label>
-            <CreatableSelect
-              isClearable
-              isDisabled={isLoadingDicts}
-              isLoading={isLoadingDicts}
-              options={dicts.trackerModels || []}
-              value={
-                activeTracker.tracker_model
-                  ? {
-                      value: activeTracker.tracker_model,
-                      label: activeTracker.tracker_model,
-                    }
-                  : null
-              }
-              onChange={(val, meta) =>
-                handleSmartSelect(
-                  val,
-                  meta,
-                  actualTabIndex,
-                  'tracker_model',
-                  'trackerModels',
-                  api.trackerModels
-                )
-              }
-              placeholder="Оберіть..."
-              formatCreateLabel={val => `Створити "${val}"`}
-              styles={selectStyles}
-            />
-          </div>
+        return (
+          <TrackerItemBox key={index}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+              }}
+            >
+              <div>
+                <strong
+                  style={{
+                    fontSize: '15px',
+                    color: '#0f172a',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <HardDrive size={16} color="#3b82f6" />{' '}
+                  {tracker.model || 'Невідома модель'}
+                </strong>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#64748b',
+                    marginTop: '6px',
+                  }}
+                >
+                  IMEI: <b style={{ color: '#0f172a' }}>{tracker.imei}</b>
+                  {tracker.serial_number && (
+                    <span style={{ marginLeft: '12px' }}>
+                      S/N:{' '}
+                      <b style={{ color: '#0f172a' }}>
+                        {tracker.serial_number}
+                      </b>
+                    </span>
+                  )}
+                  {tracker.sent_id && (
+                    <span style={{ marginLeft: '12px' }}>
+                      SENT ID:{' '}
+                      <b style={{ color: '#0f172a' }}>{tracker.sent_id}</b>
+                    </span>
+                  )}
+                </div>
+              </div>
+              <RemoveBtn
+                type="button"
+                onClick={() => handleUnlinkTracker(index)}
+                title="Відв'язати трекер (повернеться на склад)"
+              >
+                <Unlink size={16} style={{ marginRight: '4px' }} /> Відв'язати
+              </RemoveBtn>
+            </div>
 
-          <div>
-            <Label>IMEI трекера</Label>
-            <Input
-              value={activeTracker.tracker_imei || ''}
-              onChange={e =>
-                handleChange(actualTabIndex, 'tracker_imei', e.target.value)
-              }
-              placeholder="Напр., 350000000000000"
-              maxLength={15}
-            />
-          </div>
+            <div
+              style={{
+                marginTop: '16px',
+                padding: '12px',
+                background: 'white',
+                borderRadius: '8px',
+                border: '1px dashed #cbd5e1',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#475569',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <CreditCard size={14} color="#8b5cf6" /> СІМ-карта:
+              </div>
 
-          <div>
-            <Label>Серійний номер (S/N)</Label>
-            <Input
-              value={activeTracker.tracker_serial || ''}
-              onChange={e =>
-                handleChange(actualTabIndex, 'tracker_serial', e.target.value)
-              }
-              placeholder="Введіть серійник"
-            />
-          </div>
+              {sim ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ fontSize: '13px', color: '#0f172a' }}>
+                    <b style={{ fontSize: '14px' }}>{sim.phone_number}</b> (
+                    {sim.operator || 'Без оператора'}) <br />
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      ICCID: {sim.iccid || 'Не вказано'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleUnlinkSim(tracker.id, sim.id)}
+                    style={{
+                      background: '#fee2e2',
+                      color: '#ef4444',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Unlink size={14} /> Відв'язати
+                  </button>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span style={{ fontSize: '13px', color: '#ef4444' }}>
+                    СІМ-карта відсутня
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTrackerForSim(tracker.id)}
+                    style={{
+                      background: '#f3e8ff',
+                      color: '#7e22ce',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <SmartphoneNfc size={14} /> Вставити СІМ
+                  </button>
+                </div>
+              )}
+            </div>
+          </TrackerItemBox>
+        );
+      })}
 
-          <div>
-            <Label>Оператор SIM</Label>
-            <CreatableSelect
-              isClearable
-              isDisabled={isLoadingDicts}
-              isLoading={isLoadingDicts}
-              options={dicts.simOperators || []}
-              value={
-                activeTracker.sim_operator
-                  ? {
-                      value: activeTracker.sim_operator,
-                      label: activeTracker.sim_operator,
-                    }
-                  : null
-              }
-              onChange={(val, meta) =>
-                handleSmartSelect(
-                  val,
-                  meta,
-                  actualTabIndex,
-                  'sim_operator',
-                  'simOperators',
-                  api.simOperators
-                )
-              }
-              placeholder="Оберіть..."
-              formatCreateLabel={val => `Створити "${val}"`}
-              styles={selectStyles}
-            />
-          </div>
+      {trackers.length === 0 && (
+        <div
+          style={{
+            padding: '20px',
+            textAlign: 'center',
+            color: '#94a3b8',
+            fontSize: '13px',
+          }}
+        >
+          Немає трекерів на цьому авто. Натисніть "Прив'язати трекер".
+        </div>
+      )}
 
-          <div>
-            <Label>Номер SIM-карти</Label>
-            <Input
-              value={activeTracker.sim_number || ''}
-              onChange={e =>
-                handleChange(actualTabIndex, 'sim_number', e.target.value)
-              }
-              placeholder="+380..."
-            />
-          </div>
+      {isTrackerModalOpen && (
+        <TrackerManagerModal
+          dicts={dicts}
+          onClose={() => setTrackerModalOpen(false)}
+          onSelect={handleAddTracker}
+        />
+      )}
 
-          <div>
-            <Label>Місце встановлення</Label>
-            <Input
-              value={activeTracker.installation_location || ''}
-              onChange={e =>
-                handleChange(
-                  actualTabIndex,
-                  'installation_location',
-                  e.target.value
-                )
-              }
-              placeholder="Напр., за панеллю приладів"
-            />
-          </div>
-        </FormGroup>
-      </TabContent>
+      {activeTrackerForSim && (
+        <SimManagerModal
+          trackerId={activeTrackerForSim}
+          dicts={dicts}
+          onClose={() => setActiveTrackerForSim(null)}
+          onSelect={simObj => handleSimAttached(activeTrackerForSim, simObj)}
+        />
+      )}
     </SectionContainer>
   );
 };

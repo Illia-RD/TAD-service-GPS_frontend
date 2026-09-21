@@ -18,13 +18,12 @@ const mapVehicleData = dbData => ({
   files: dbData.files || [],
   tanks_data: dbData.tanks_data || [],
   drps_data: dbData.drps_data || [],
-  trackers: dbData.trackers || [], // Тепер це реальні об'єкти з окремої таблиці
+  trackers: dbData.trackers || [],
 });
 
 const preparePayload = formData => {
   const payload = { ...formData };
 
-  // Видаляємо трекери з пейлоада, бо вони керуються окремими запитами
   delete payload.trackers_data;
   delete payload.trackers;
 
@@ -60,6 +59,41 @@ const preparePayload = formData => {
   return payload;
 };
 
+// ДОПОМІЖНА ФУНКЦІЯ ОРКЕСТРАЦІЇ ТРЕКЕРІВ
+const syncTrackers = async (
+  vehicleId,
+  currentTrackers = [],
+  previousTrackers = []
+) => {
+  const currentIds = currentTrackers
+    .filter(t => !t.is_new_from_form && t.id)
+    .map(t => String(t.id));
+  const previousIds = previousTrackers.map(t => String(t.id));
+
+  const removedIds = previousIds.filter(id => !currentIds.includes(id));
+  for (const id of removedIds) {
+    // Зняття трекера на бекенді (unassign)
+    await axios.post(`${BASE_URL}trackers/${id}/unassign`).catch(() => {});
+  }
+
+  for (const tracker of currentTrackers) {
+    if (tracker.is_new_from_form) {
+      const res = await axios.post(`${BASE_URL}trackers/`, {
+        imei: tracker.imei,
+        model: tracker.model,
+        sent_id: tracker.sent_id || null,
+        serial_number: tracker.serial_number || null,
+        status: 'new',
+      });
+      await axios.post(
+        `${BASE_URL}trackers/${res.data.id}/assign/${vehicleId}`
+      );
+    } else if (tracker.id && !previousIds.includes(String(tracker.id))) {
+      await axios.post(`${BASE_URL}trackers/${tracker.id}/assign/${vehicleId}`);
+    }
+  }
+};
+
 export const vehiclesApi = {
   getAll: async () => {
     const response = await axios.get(BASE_URL);
@@ -70,14 +104,18 @@ export const vehiclesApi = {
     try {
       const payload = preparePayload(formData);
       const response = await axios.post(BASE_URL, payload);
-      return mapVehicleData(response.data);
-    } catch (error) {
-      if (error.response && error.response.status === 422) {
-        console.error(
-          'FASTAPI 422 CREATE DETAILS:',
-          JSON.stringify(error.response.data.detail, null, 2)
-        );
+      const newVehicleId = response.data.id;
+
+      if (formData.trackers && formData.trackers.length > 0) {
+        await syncTrackers(newVehicleId, formData.trackers, []);
       }
+
+      const allRes = await axios.get(BASE_URL);
+      const finalVehicle = allRes.data.find(
+        v => String(v.id) === String(newVehicleId)
+      );
+      return mapVehicleData(finalVehicle || response.data);
+    } catch (error) {
       throw error;
     }
   },
@@ -85,22 +123,36 @@ export const vehiclesApi = {
   update: async (id, formData) => {
     try {
       const payload = preparePayload(formData);
-      const response = await axios.put(`${BASE_URL}${id}`, payload);
-      return mapVehicleData(response.data);
+      const allVehiclesRes = await axios.get(BASE_URL);
+      const prevVehicle = allVehiclesRes.data.find(
+        v => String(v.id) === String(id)
+      );
+      const prevTrackers = prevVehicle ? prevVehicle.trackers || [] : [];
+
+      await axios.put(`${BASE_URL}${id}`, payload);
+      await syncTrackers(id, formData.trackers || [], prevTrackers);
+
+      const updatedAllRes = await axios.get(BASE_URL);
+      const finalVehicle = updatedAllRes.data.find(
+        v => String(v.id) === String(id)
+      );
+      return mapVehicleData(finalVehicle);
     } catch (error) {
-      if (error.response && error.response.status === 422) {
-        console.error(
-          'FASTAPI 422 UPDATE DETAILS:',
-          JSON.stringify(error.response.data.detail, null, 2)
-        );
-      }
       throw error;
     }
   },
 
   getUniqueOtherEquipment: async () => {
-    const response = await axios.get(`${BASE_URL}other-equipment/unique`);
-    return response.data.map(item => ({ value: item.name, label: item.name }));
+    try {
+      const response = await axios.get(`${BASE_URL}other-equipment/unique`);
+      return response.data.map(item => ({
+        value: item.name,
+        label: item.name,
+      }));
+    } catch (error) {
+      // Глушимо помилку прямо тут, щоб Promise.all не падав ніколи
+      return [];
+    }
   },
 
   uploadTankPhoto: async file => {
@@ -170,7 +222,7 @@ export const vehiclesApi = {
     return response.data;
   },
 
-  // === НОВІ МЕТОДИ ДЛЯ ТРЕКЕРІВ ТА СІМ-КАРТ ===
+  // === МЕТОДИ ТРЕКЕРІВ І СІМ ===
   getInventoryTrackers: async () => {
     const response = await axios.get(`${BASE_URL}archive/trackers/`);
     return response.data;
@@ -187,10 +239,11 @@ export const vehiclesApi = {
   },
   removeTracker: async trackerId => {
     const response = await axios.post(
-      `${BASE_URL}trackers/${trackerId}/remove`
+      `${BASE_URL}trackers/${trackerId}/unassign`
     );
     return response.data;
   },
+
   getInventorySims: async () => {
     const response = await axios.get(`${BASE_URL}archive/sim-cards/`);
     return response.data;
@@ -203,6 +256,12 @@ export const vehiclesApi = {
     const response = await axios.post(
       `${BASE_URL}sim-cards/${simId}/assign/${trackerId}`
     );
+    return response.data;
+  },
+
+  // ВІДВ'ЯЗКА СІМ-КАРТИ (Змінено на /unassign, бо /remove видавало 404)
+  removeSimCard: async simId => {
+    const response = await axios.post(`${BASE_URL}sim-cards/${simId}/unassign`);
     return response.data;
   },
 };
