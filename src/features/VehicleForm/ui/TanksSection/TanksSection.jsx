@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { vehiclesApi } from '../../../../shared/api/vehiclesApi';
-import { Button } from '../../../../shared/ui/Button/Button';
-import { Input, Select } from '../../../../shared/ui/Input/Input';
+import { vehiclesApi } from '@/shared/api/vehiclesApi';
+import { Button } from '@/shared/ui/Button/Button';
+import { Input, Select } from '@/shared/ui/Input/Input';
 import {
   TabsHeader,
   TabButton,

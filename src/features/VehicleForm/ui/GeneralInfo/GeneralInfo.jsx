@@ -1,10 +1,11 @@
 import React from 'react';
 import CreatableSelect from 'react-select/creatable';
 import { useTheme } from 'styled-components';
-import { Input, Select } from '../../../../../shared/ui/Input/Input';
-import { dictionariesApi } from '../../../../../shared/api/dictionariesApi';
-import { Grid, Label, FieldWrapper } from './GeneralInfo.styled';
 
+// ТУТ БУЛО 5 РІВНІВ, А ТРЕБА 4:
+import { Input, Select } from '@/shared/ui/Input/Input';
+import { dictionariesApi } from '@/shared/api/dictionariesApi';
+import { Grid, Label, FieldWrapper } from './GeneralInfo.styled';
 export const GeneralInfo = ({
   formData,
   setFormData,

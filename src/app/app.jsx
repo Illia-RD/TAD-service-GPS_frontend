@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AppThemeProvider, useTheme } from './providers/ThemeProvider';
-import { VehiclesPage } from '../pages/VehiclesPage/ui/VehiclesPage';
+import { VehiclesPage } from '@/pages/VehiclesPage/ui/VehiclesPage';
+import { WarehousePage } from '@/pages/WarehousePage/ui/WarehousePage'; // Імпортуємо склад
 import {
   AppContainer,
   Header,
@@ -27,6 +28,15 @@ const AppContent = () => {
             >
               Автопарк
             </TabButton>
+
+            {/* Додали кнопку Складу */}
+            <TabButton
+              $active={activeTab === 'warehouse'}
+              onClick={() => setActiveTab('warehouse')}
+            >
+              Склад обладнання
+            </TabButton>
+
             <TabButton
               $active={activeTab === 'tickets'}
               onClick={() => setActiveTab('tickets')}
@@ -49,8 +59,7 @@ const AppContent = () => {
 
       <main>
         {activeTab === 'vehicles' && <VehiclesPage />}
-
-        {/* Заглушки для майбутніх сторінок, без інлайн стилів обійдемося звичайним p */}
+        {activeTab === 'warehouse' && <WarehousePage />} {/* Рендеримо склад */}
         {activeTab === 'tickets' && <p>Сторінка Канбану (в розробці...)</p>}
         {activeTab === 'trash' && <p>Сторінка Кошика (в розробці...)</p>}
       </main>

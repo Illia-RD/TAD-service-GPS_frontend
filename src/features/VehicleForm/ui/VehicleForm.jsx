@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { dictionariesApi } from '../../../shared/api/dictionariesApi';
-import { vehiclesApi } from '../../../shared/api/vehiclesApi';
-import { Button } from '../../../shared/ui/Button/Button';
+import { dictionariesApi } from '@/shared/api/dictionariesApi';
+import { vehiclesApi } from '@/shared/api/vehiclesApi';
+import { Button } from '@/shared/ui/Button/Button';
 import {
   FormWrapper,
   FormTitle,
   FormActions,
   NotesArea,
   SectionTitle,
+  SectionContainer,
 } from './VehicleForm.styled';
 
 // Поки імпортуємо пусті заглушки (ми їх створимо наступним кроком)
 import { GeneralInfo } from './GeneralInfo/GeneralInfo';
 import { TanksSection } from './TanksSection/TanksSection';
 // import { TrackersSection } from './TrackersSection/TrackersSection';
-// import { LlsSection } from './LlsSection/LlsSection';
+import { LlsSection } from './LlsSection/LlsSection';
 // import { OtherEquipment } from './OtherEquipment/OtherEquipment';
 
 export const VehicleForm = ({ initialData, onSubmit, onCancel }) => {
@@ -129,7 +130,10 @@ export const VehicleForm = ({ initialData, onSubmit, onCancel }) => {
           <SectionTitle>Паливні баки</SectionTitle>
           <TanksSection {...sectionProps} />
         </SectionContainer>
-
+        <SectionContainer>
+          <SectionTitle>Датчики рівня пального (LLS)</SectionTitle>
+          <LlsSection {...sectionProps} />
+        </SectionContainer>
         <div>
           <SectionTitle>Примітка</SectionTitle>
           <NotesArea
