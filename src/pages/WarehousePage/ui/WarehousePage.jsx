@@ -6,6 +6,7 @@ import {
   TabContent,
 } from './WarehousePage.styled';
 import { TrackersTab } from './tabs/TrackersTab';
+import { SimsTab } from './tabs/SimsTab'; // Додали імпорт СІМ-карт
 
 export const WarehousePage = () => {
   const [activeTab, setActiveTab] = useState('trackers');
@@ -40,7 +41,9 @@ export const WarehousePage = () => {
         {activeTab === 'lls' && (
           <div>Тут буде таблиця ДВРП (робимо за аналогією)...</div>
         )}
-        {activeTab === 'sims' && <div>Тут буде таблиця СІМ-карт...</div>}
+
+        {/* Підв'язали рендер вкладки СІМ-карт */}
+        {activeTab === 'sims' && <SimsTab />}
       </TabContent>
     </PageContainer>
   );

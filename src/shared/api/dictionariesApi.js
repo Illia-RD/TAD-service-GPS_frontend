@@ -1,24 +1,39 @@
 import { api } from './axiosInstance';
 
-const generateApi = endpoint => ({
-  getAll: async () => (await api.get(`dictionaries/${endpoint}`)).data,
-  create: async name =>
-    (await api.post(`dictionaries/${endpoint}`, { name })).data,
-});
-
 export const dictionariesApi = {
-  makes: generateApi('makes'),
-  models: generateApi('models'),
-  llsModels: generateApi('lls-models'), // Оновлено з drp-types
-  tasks: generateApi('tasks'),
-  euroStandards: generateApi('euro-standards'),
-  trackerModels: generateApi('tracker-models'),
-  simOperators: generateApi('sim-operators'),
-  groups: generateApi('groups'),
+  // Ті, що вже є для авто
+  getMakes: async () => (await api.get('/dictionaries/vehicle-makes')).data,
+  getModels: async () => (await api.get('/dictionaries/vehicle-models')).data,
+  createMake: async name =>
+    (await api.post('/dictionaries/makes', { name })).data,
+  createModel: async name =>
+    (await api.post('/dictionaries/models', { name })).data,
 
-  tankModels: {
-    getAll: async () => (await api.get('dictionaries/tank-models')).data,
-    create: async data =>
-      (await api.post('dictionaries/tank-models', data)).data,
+  // --- ДОДАЄМО ДЛЯ СКЛАДУ ---
+  getSimOperators: async () => {
+    const response = await api.get('/dictionaries/sim-operators'); // Перевір точний URL в своєму v1/dictionaries.py
+    return response.data;
+  },
+  createSimOperator: async name => {
+    const response = await api.post('/dictionaries/sim-operators', { name });
+    return response.data;
+  },
+
+  getTrackerModels: async () => {
+    const response = await api.get('/dictionaries/tracker-models');
+    return response.data;
+  },
+  createTrackerModel: async name => {
+    const response = await api.post('/dictionaries/tracker-models', { name });
+    return response.data;
+  },
+
+  getLlsModels: async () => {
+    const response = await api.get('/dictionaries/lls-models');
+    return response.data;
+  },
+  createLlsModel: async name => {
+    const response = await api.post('/dictionaries/lls-models', { name });
+    return response.data;
   },
 };

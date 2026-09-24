@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import CreatableSelect from 'react-select/creatable';
 
 import { equipmentApi } from '@/shared/api/equipmentApi';
+import { dictionariesApi } from '@/shared/api/dictionariesApi';
 import { Button } from '@/shared/ui/Button/Button';
 import { Input, Select } from '@/shared/ui/Input/Input';
 import { Modal } from '@/shared/ui/Modal/Modal';
-
-import { Table, Badge } from './SimsTab.styled';
+import { useTheme } from 'styled-components';
+import {
+  HeaderWrapper,
+  Table,
+  Badge,
+  EmptyRow,
+  FormWrapper,
+  FormTitle,
+  FieldGroup,
+  Label,
+  ActionsRow,
+} from './SimsTab.styled';
 
 export const SimsTab = () => {
+  const { theme } = useTheme();
   const [sims, setSims] = useState([]);
   const [operators, setOperators] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,10 +35,12 @@ export const SimsTab = () => {
     try {
       const [simsData, opsData] = await Promise.all([
         equipmentApi.getArchiveSims(),
-        equipmentApi.getOperators().catch(() => []),
+        dictionariesApi.getSimOperators().catch(() => []),
       ]);
       setSims(simsData);
-      setOperators(opsData);
+
+      // Форматуємо для react-select { value, label }
+      setOperators(opsData.map(op => ({ value: op.name, label: op.name })));
     } catch (err) {
       console.error('Помилка завантаження СІМ-карт:', err);
     }
@@ -34,6 +49,21 @@ export const SimsTab = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleCreateOperator = async inputValue => {
+    try {
+      // Створюємо оператора на бекенді
+      const newOp = await dictionariesApi.createSimOperator(inputValue);
+      const newOption = { value: newOp.name, label: newOp.name };
+
+      // Додаємо в список і вибираємо
+      setOperators(prev => [...prev, newOption]);
+      setFormData(prev => ({ ...prev, operator: newOp.name }));
+    } catch (error) {
+      console.error('Помилка створення оператора', error);
+      alert('Не вдалося створити оператора');
+    }
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -47,20 +77,42 @@ export const SimsTab = () => {
     }
   };
 
+  // Стилі для react-select щоб він не вибивався з нашої теми
+  // Безпечні стилі для react-select із фолбеками на випадок відсутності теми
+  const selectStyles = {
+    control: base => ({
+      ...base,
+      backgroundColor: theme?.colors?.surface || '#ffffff',
+      borderColor: theme?.colors?.border || '#e5e7eb',
+      minHeight: '38px',
+    }),
+    singleValue: base => ({
+      ...base,
+      color: theme?.colors?.text?.primary || '#111827',
+    }),
+    menu: base => ({
+      ...base,
+      backgroundColor: theme?.colors?.surface || '#ffffff',
+      zIndex: 9999,
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isFocused
+        ? theme?.colors?.background || '#f3f4f6'
+        : 'transparent',
+      color: theme?.colors?.text?.primary || '#111827',
+      cursor: 'pointer',
+    }),
+  };
+
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
+      <HeaderWrapper>
         <h3>Вільні СІМ-карти на складі ({sims.length})</h3>
         <Button variant="primary" onClick={() => setIsModalOpen(true)}>
           + Додати СІМ-карту
         </Button>
-      </div>
+      </HeaderWrapper>
 
       <Table>
         <thead>
@@ -74,9 +126,7 @@ export const SimsTab = () => {
         <tbody>
           {sims.length === 0 ? (
             <tr>
-              <td colSpan="4" style={{ textAlign: 'center', color: '#888' }}>
-                Склад СІМ-карт порожній
-              </td>
+              <EmptyRow colSpan="4">Склад СІМ-карт порожній</EmptyRow>
             </tr>
           ) : (
             sims.map(sim => (
@@ -97,20 +147,11 @@ export const SimsTab = () => {
 
       {isModalOpen && (
         <Modal onClose={() => setIsModalOpen(false)}>
-          <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
-            <h3 style={{ marginBottom: '16px' }}>Додати СІМ-карту</h3>
+          <FormWrapper onSubmit={handleSubmit}>
+            <FormTitle>Додати СІМ-карту</FormTitle>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                Номер телефону
-              </label>
+            <FieldGroup>
+              <Label>Номер телефону</Label>
               <Input
                 required
                 value={formData.phone_number}
@@ -119,19 +160,10 @@ export const SimsTab = () => {
                 }
                 placeholder="+380..."
               />
-            </div>
+            </FieldGroup>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                ICCID
-              </label>
+            <FieldGroup>
+              <Label>ICCID</Label>
               <Input
                 value={formData.iccid}
                 onChange={e =>
@@ -139,45 +171,31 @@ export const SimsTab = () => {
                 }
                 placeholder="8938..."
               />
-            </div>
+            </FieldGroup>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                Оператор
-              </label>
-              <Select
-                value={formData.operator}
-                onChange={e =>
-                  setFormData({ ...formData, operator: e.target.value })
+            <FieldGroup>
+              <Label>Оператор</Label>
+              <CreatableSelect
+                isClearable
+                placeholder="Виберіть або створіть..."
+                options={operators}
+                value={
+                  operators.find(op => op.value === formData.operator) || null
                 }
-              >
-                <option value="">-- Виберіть оператора --</option>
-                {operators.map(op => (
-                  <option key={op.id} value={op.name}>
-                    {op.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
+                onChange={newValue =>
+                  setFormData({
+                    ...formData,
+                    operator: newValue ? newValue.value : '',
+                  })
+                }
+                onCreateOption={handleCreateOperator}
+                styles={selectStyles}
+                formatCreateLabel={inputValue => `Створити "${inputValue}"`}
+              />
+            </FieldGroup>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                Статус
-              </label>
+            <FieldGroup>
+              <Label>Статус</Label>
               <Select
                 value={formData.status}
                 onChange={e =>
@@ -188,15 +206,9 @@ export const SimsTab = () => {
                 <option value="in_stock">На складі (Б/В)</option>
                 <option value="repair">В ремонті</option>
               </Select>
-            </div>
+            </FieldGroup>
 
-            <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'flex-end',
-              }}
-            >
+            <ActionsRow>
               <Button
                 type="button"
                 variant="outline"
@@ -207,8 +219,8 @@ export const SimsTab = () => {
               <Button type="submit" variant="primary">
                 Зберегти
               </Button>
-            </div>
-          </form>
+            </ActionsRow>
+          </FormWrapper>
         </Modal>
       )}
     </div>
