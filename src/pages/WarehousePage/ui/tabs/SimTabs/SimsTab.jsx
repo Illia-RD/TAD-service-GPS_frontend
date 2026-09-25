@@ -30,7 +30,7 @@ import {
 } from './SimsTab.styled';
 
 export const SimsTab = () => {
-  const { theme } = useTheme();
+  const theme = useTheme();
   const [sims, setSims] = useState([]);
   const [operators, setOperators] = useState([]);
   const [networkStatuses, setNetworkStatuses] = useState([]);
@@ -116,32 +116,55 @@ export const SimsTab = () => {
   };
 
   const selectStyles = {
-    control: base => ({
+    control: (base, state) => ({
       ...base,
-      backgroundColor: theme?.colors?.surface || '#ffffff',
-      borderColor: theme?.colors?.border || '#e5e7eb',
+      backgroundColor: theme.colors.surface, // Фон поля
+      borderColor: state.isFocused
+        ? theme.colors.borderFocus
+        : theme.colors.border, // Рамка при кліку і без
       minHeight: '38px',
+      boxShadow: 'none',
+      '&:hover': {
+        borderColor: theme.colors.borderFocus,
+      },
     }),
     singleValue: base => ({
       ...base,
-      color: theme?.colors?.text?.primary || '#ffffff', // <-- Виправлено
+      color: theme.colors.text.primary, // Колір вибраного тексту
     }),
     input: base => ({
       ...base,
-      color: theme?.colors?.text?.primary || '#ffffff', // <-- ДОДАНО (для вводу тексту)
+      color: theme.colors.text.primary, // Колір тексту під час введення
     }),
     menu: base => ({
       ...base,
-      backgroundColor: theme?.colors?.surface || '#ffffff',
+      backgroundColor: theme.colors.surface, // Фон випадаючого списку
+      border: `1px solid ${theme.colors.border}`,
+      boxShadow: theme.shadows.md, // Твоя тінь із theme.js
       zIndex: 9999,
     }),
     option: (base, state) => ({
       ...base,
       backgroundColor: state.isFocused
-        ? theme?.colors?.background || '#374151'
+        ? theme.colors.surfaceAlt // Підсвітка при наведенні (не primary, щоб текст не губився)
         : 'transparent',
-      color: theme?.colors?.text?.primary || '#ffffff', // <-- Виправлено
+      color: theme.colors.text.primary, // Колір списку опцій
       cursor: 'pointer',
+      '&:active': {
+        backgroundColor: theme.colors.primary.main, // При самому кліку
+        color: '#ffffff', // Тут білий виправданий, бо на синьому тлі primary.main
+      },
+    }),
+    // Кнопка очищення (хрестик) та стрілка
+    clearIndicator: base => ({
+      ...base,
+      color: theme.colors.text.muted,
+      '&:hover': { color: theme.colors.text.primary },
+    }),
+    dropdownIndicator: base => ({
+      ...base,
+      color: theme.colors.text.muted,
+      '&:hover': { color: theme.colors.text.primary },
     }),
   };
 

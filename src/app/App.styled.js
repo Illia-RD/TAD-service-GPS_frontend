@@ -70,13 +70,12 @@ export const Nav = styled.nav`
   }
 `;
 export const TabButton = styled.button`
-  /* Активний фон - легкий відтінок primary (20% прозорості), неактивний - прозорий */
   background: ${({ $active, theme }) =>
-    $active ? `${theme.colors.primary}20` : 'transparent'};
+    $active ? theme.colors.primary.main : 'transparent'};
 
-  /* Активний текст - колір primary, неактивний - звичайний текст теми */
+  /* Тепер тягнемо контрастний колір прямо з теми */
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary : theme.colors.text.primary};
+    $active ? theme.colors.primary.contrastText : theme.colors.text.primary};
 
   border: none;
   padding: 8px 16px;
@@ -87,7 +86,9 @@ export const TabButton = styled.button`
 
   &:hover {
     background: ${({ $active, theme }) =>
-      $active ? `${theme.colors.primary}30` : theme.colors.background};
+      $active ? theme.colors.primary.hover : theme.colors.surfaceAlt};
+    color: ${({ $active, theme }) =>
+      $active ? theme.colors.primary.contrastText : theme.colors.text.primary};
   }
 
   @media (max-width: 768px) {

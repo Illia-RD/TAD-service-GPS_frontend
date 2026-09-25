@@ -14,6 +14,7 @@ export const lightTheme = {
       main: '#2563eb',
       hover: '#1d4ed8',
       light: '#eff6ff',
+      contrastText: '#ffffff',
     },
     status: {
       success: '#10b981',
@@ -55,6 +56,7 @@ export const darkTheme = {
       main: '#3b82f6',
       hover: '#60a5fa',
       light: '#1e3a8a',
+      contrastText: '#ffffff',
     },
     status: {
       success: '#10b981',

@@ -114,24 +114,26 @@ export const Badge = styled.span`
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+
   background: ${({ theme, $variant }) => {
     switch ($variant) {
       case 'new':
-        return '#e0f2fe';
+        return theme.colors.status.infoBg;
       case 'used':
-        return '#fef3c7';
+        return theme.colors.status.warningBg;
       default:
-        return theme.colors.primary + '20';
+        return theme.colors.primary.light;
     }
   }};
+
   color: ${({ theme, $variant }) => {
     switch ($variant) {
       case 'new':
-        return '#0284c7';
+        return theme.colors.status.info;
       case 'used':
-        return '#d97706';
+        return theme.colors.status.warning;
       default:
-        return theme.colors.primary;
+        return theme.colors.primary.main;
     }
   }};
 `;
