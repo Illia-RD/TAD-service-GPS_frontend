@@ -18,7 +18,17 @@ export const dictionariesApi = {
     const response = await api.post('/dictionaries/sim-operators', { name });
     return response.data;
   },
-
+  // Статуси мережі СІМ-карт
+  getSimNetworkStatuses: async () => {
+    const response = await api.get('/dictionaries/sim-network-statuses');
+    return response.data;
+  },
+  createSimNetworkStatus: async name => {
+    const response = await api.post('/dictionaries/sim-network-statuses', {
+      name,
+    });
+    return response.data;
+  },
   getTrackerModels: async () => {
     const response = await api.get('/dictionaries/tracker-models');
     return response.data;

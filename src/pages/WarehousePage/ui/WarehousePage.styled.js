@@ -14,24 +14,23 @@ export const TabsHeader = styled.div`
 `;
 
 export const TabBtn = styled.button`
-  background: none;
-  border: none;
   padding: 8px 16px;
-  font-size: 15px;
-  font-weight: 500;
+  border: none;
+  background: transparent;
+  /* Активний текст - яскравий основний текст, неактивний - тьмяніший */
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary : theme.colors.text.secondary};
+    $active ? theme.colors.text.primary : theme.colors.text.secondary};
+  /* Лінія підкреслення залишається primary */
   border-bottom: 2px solid
     ${({ $active, theme }) => ($active ? theme.colors.primary : 'transparent')};
+  font-weight: ${({ $active }) => ($active ? '600' : '500')};
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: -9px;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
-
 export const TabContent = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   border-radius: ${({ theme }) => theme.radii.lg};
