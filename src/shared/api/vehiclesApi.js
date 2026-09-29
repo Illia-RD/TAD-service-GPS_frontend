@@ -21,7 +21,7 @@ export const vehiclesApi = {
     return data;
   },
 
-  // --- ФАЙЛИ ТАРУВАННЯ ТА ФОТО ---
+  // --- ФОТО ТА ДОКУМЕНТИ АВТО ---
   uploadTankPhoto: async file => {
     const formData = new FormData();
     formData.append('file', file);
@@ -31,30 +31,20 @@ export const vehiclesApi = {
     return data;
   },
 
-  uploadTareFile: async (
-    vehicleId,
-    file,
-    tankIndex = null,
-    fileType = 'тарування',
-    noNeckAccess = false
-  ) => {
+  // Новий метод замість uploadTareFile (для сканів техпаспорта тощо)
+  uploadVehicleFile: async (vehicleId, file, fileType = 'документ') => {
     const formData = new FormData();
     formData.append('file', file);
-    if (tankIndex !== null) formData.append('tank_index', tankIndex);
     formData.append('file_type', fileType);
-    formData.append('no_neck_access', noNeckAccess);
 
-    const { data } = await api.post(
-      `vehicles/${vehicleId}/upload-tare/`,
-      formData,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
-    );
+    const { data } = await api.post(`vehicles/${vehicleId}/files/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return data;
   },
 
-  deleteTareFile: async fileId => {
+  // Новий метод для видалення звичайних файлів авто
+  deleteVehicleFile: async fileId => {
     const { data } = await api.delete(`vehicles/files/${fileId}`);
     return data;
   },

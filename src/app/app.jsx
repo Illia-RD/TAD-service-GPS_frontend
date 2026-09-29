@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { AppThemeProvider, useTheme } from './providers/ThemeProvider';
 import { VehiclesPage } from '@/pages/VehiclesPage/ui/VehiclesPage';
 import { WarehousePage } from '@/pages/WarehousePage/ui/WarehousePage';
+import { TareArchivePage } from '@/pages/TareArchive/ui/TareArchivePage';
+
 import {
   AppContainer,
   Header,
@@ -9,15 +11,15 @@ import {
   Nav,
   TabButton,
   ThemeToggleBtn,
-  BurgerButton, // <--- Новий імпорт
+  BurgerButton,
 } from './App.styled';
 import { Menu, X, Sun, Moon } from 'lucide-react';
+
 const AppContent = () => {
   const { isDarkMode, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('vehicles');
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // Стан для мобільного меню
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Функція для перемикання вкладок, яка також закриває меню на мобілці
   const handleTabChange = tabName => {
     setActiveTab(tabName);
     setIsMenuOpen(false);
@@ -29,7 +31,6 @@ const AppContent = () => {
         <h2>TAD Service GPS</h2>
 
         <HeaderRight>
-          {/* 1. Навігація (ховається в бургер на мобілках) */}
           <Nav $isOpen={isMenuOpen}>
             <TabButton
               $active={activeTab === 'vehicles'}
@@ -42,6 +43,12 @@ const AppContent = () => {
               onClick={() => handleTabChange('warehouse')}
             >
               Склад обладнання
+            </TabButton>
+            <TabButton
+              $active={activeTab === 'tare'}
+              onClick={() => handleTabChange('tare')}
+            >
+              Архів ТАР
             </TabButton>
             <TabButton
               $active={activeTab === 'tickets'}
@@ -57,12 +64,10 @@ const AppContent = () => {
             </TabButton>
           </Nav>
 
-          {/* 2. Бургер (тільки на мобілках) */}
           <BurgerButton onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
           </BurgerButton>
 
-          {/* 3. Селектор теми (ЗАВЖДИ ЗПРАВА) */}
           <ThemeToggleBtn onClick={toggleTheme}>
             <span className="theme-text">
               {isDarkMode ? (
@@ -85,6 +90,7 @@ const AppContent = () => {
       <main style={{ padding: '16px' }}>
         {activeTab === 'vehicles' && <VehiclesPage />}
         {activeTab === 'warehouse' && <WarehousePage />}
+        {activeTab === 'tare' && <TareArchivePage />}
         {activeTab === 'tickets' && <p>Сторінка Канбану (в розробці...)</p>}
         {activeTab === 'trash' && <p>Сторінка Кошика (в розробці...)</p>}
       </main>

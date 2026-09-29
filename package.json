@@ -18,8 +18,10 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-select": "^5.10.2",
+    "react-swipeable-list": "^1.10.0",
     "styled-components": "^6.4.3",
     "three": "^0.185.1",
+    "use-long-press": "^3.3.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
