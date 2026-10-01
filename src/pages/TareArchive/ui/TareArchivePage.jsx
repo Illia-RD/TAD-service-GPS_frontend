@@ -7,7 +7,7 @@ import { TarList } from './TarList/TarList';
 import { TarEditModal } from './TarEditModal/TarEditModal';
 import { TarVehiclesModal } from './TarVehiclesModal/TarVehiclesModal';
 import { Modal } from '@/shared/ui/Modal/Modal';
-
+import { TarViewerModal } from './TarViewerModal/TarViewerModal';
 import {
   PageContainer,
   PageHeader,
@@ -159,6 +159,7 @@ export const TareArchivePage = () => {
         onDoubleClick={id => setViewerModalId(id)}
         onEdit={file => setEditingFile(file)}
         onViewVehicles={id => setViewingVehiclesId(id)}
+        onView={id => setViewerModalId(id)}
       />
 
       {editingFile && (
@@ -177,12 +178,11 @@ export const TareArchivePage = () => {
       )}
 
       {viewerModalId && (
-        <Modal onClose={() => setViewerModalId(null)}>
-          <h3 style={{ marginBottom: '16px' }}>Перегляд ТАР-файлу</h3>
-          <p>
-            Тут буде відображено розрахунок літрів (з кроком 20л) та міліметрів.
-          </p>
-        </Modal>
+        <TarViewerModal
+          file={tarFiles.find(f => f.id === viewerModalId)}
+          onClose={() => setViewerModalId(null)}
+          onUpdateFile={() => loadFiles()}
+        />
       )}
     </PageContainer>
   );

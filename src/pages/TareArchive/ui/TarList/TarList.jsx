@@ -8,11 +8,14 @@ import {
   SwipeAction,
 } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
-import { Star, FileText, Edit, Car } from 'lucide-react';
+import { Star, FileText, Edit, Trash2, Car, Eye } from 'lucide-react';
 
 import {
   ListContainer,
   TarRow,
+  CheckboxWrapper,
+  Cell,
+  MainInfoCell,
   FileName,
   FileMeta,
   ActionIconBtn,
@@ -23,21 +26,22 @@ export const TarList = ({
   selectedIds,
   onToggleSelection,
   onDoubleClick,
+  onView, // Новий пропс для іконки ока
   onEdit,
-  onViewVehicles,
+  onViewVehicles, // Повернули машини
+  onDelete,
 }) => {
-  const handleRowClick = (e, id) => {
-    if (selectedIds.length > 0) {
-      onToggleSelection(id, false); // false = просто додаємо/знімаємо виділення
-      return;
-    }
-
+  const handleMainZoneClick = (e, id) => {
     if (e.ctrlKey || e.metaKey) {
       onToggleSelection(id, false);
     } else {
-      // Одиночний клік без Ctrl - виділяє виключно цей файл
       onToggleSelection(id, true);
     }
+  };
+
+  const handleCheckboxChange = (e, id) => {
+    e.stopPropagation();
+    onToggleSelection(id, false);
   };
 
   const bindLongPress = useLongPress(
@@ -71,10 +75,10 @@ export const TarList = ({
 
   const trailingActions = id => (
     <TrailingActions>
-      <SwipeAction onClick={() => onViewVehicles(id)}>
+      <SwipeAction onClick={() => onDelete(id)}>
         <div
           style={{
-            background: '#17a2b8',
+            background: '#dc3545',
             color: '#fff',
             padding: '0 20px',
             display: 'flex',
@@ -83,7 +87,7 @@ export const TarList = ({
             fontWeight: '500',
           }}
         >
-          <Car size={18} /> Автомобілі
+          <Trash2 size={18} /> Видалити
         </div>
       </SwipeAction>
     </TrailingActions>
@@ -108,54 +112,100 @@ export const TarList = ({
           >
             <TarRow
               $selected={selectedIds.includes(file.id)}
-              onClick={e => handleRowClick(e, file.id)}
-              onDoubleClick={() => onDoubleClick(file.id)}
               {...bindLongPress({ context: file.id })}
             >
-              <div>
+              <CheckboxWrapper onClick={e => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(file.id)}
+                  onChange={e => handleCheckboxChange(e, file.id)}
+                />
+              </CheckboxWrapper>
+
+              <Cell onClick={e => e.stopPropagation()}>
                 {file.is_favorite ? (
                   <Star size={20} fill="#ffc107" color="#ffc107" />
                 ) : (
                   <FileText size={20} color="#999" />
                 )}
-              </div>
+              </Cell>
 
-              <div>
+              <MainInfoCell
+                onClick={e => handleMainZoneClick(e, file.id)}
+                onDoubleClick={e => {
+                  e.stopPropagation();
+                  onDoubleClick(file.id);
+                }}
+              >
                 <FileName>{file.file_name}</FileName>
-                <FileMeta>
-                  {file.dim_l
-                    ? `${file.dim_l}x${file.dim_w}x${file.dim_h} мм`
-                    : 'Габарити не вказані'}
-                  {file.nominal_volume && ` | V: ${file.nominal_volume} л`}
+                <FileMeta className="hide-on-mobile">
+                  {file.original_vehicle_number
+                    ? `Авто: ${file.original_vehicle_number}`
+                    : 'Авто не вказано'}
                 </FileMeta>
-              </div>
-
-              <div className="hide-on-mobile">
-                <FileMeta>
-                  Авто: {file.original_vehicle_number || 'Невідомо'}
-                </FileMeta>
-              </div>
-
-              <div className="hide-on-mobile">
-                <FileMeta>
+                <FileMeta className="hide-on-mobile">
                   {new Date(file.created_at).toLocaleDateString()}
                 </FileMeta>
-              </div>
 
-              <div
+                <div style={{ display: 'none' }} className="show-on-mobile">
+                  <FileMeta>
+                    {file.original_vehicle_number
+                      ? `Авто: ${file.original_vehicle_number}`
+                      : 'Авто не вказано'}
+                  </FileMeta>
+                  <FileMeta>
+                    {new Date(file.created_at).toLocaleDateString()}
+                  </FileMeta>
+                </div>
+              </MainInfoCell>
+
+              <ActionIconBtn
                 className="hide-on-mobile"
-                style={{ display: 'flex', justifyContent: 'flex-end' }}
+                $color="#17a2b8"
+                onClick={e => {
+                  e.stopPropagation();
+                  onView(file.id);
+                }}
+                title="Переглянути"
               >
-                <ActionIconBtn
-                  onClick={e => {
-                    e.stopPropagation();
-                    onViewVehicles(file.id);
-                  }}
-                  title="Де встановлено"
-                >
-                  <Car size={20} />
-                </ActionIconBtn>
-              </div>
+                <Eye size={20} />
+              </ActionIconBtn>
+
+              <ActionIconBtn
+                className="hide-on-mobile"
+                $color="#ffc107"
+                onClick={e => {
+                  e.stopPropagation();
+                  onEdit(file);
+                }}
+                title="Редагувати"
+              >
+                <Edit size={20} />
+              </ActionIconBtn>
+
+              <ActionIconBtn
+                className="hide-on-mobile"
+                $color="#28a745"
+                onClick={e => {
+                  e.stopPropagation();
+                  onViewVehicles(file.id);
+                }}
+                title="Де встановлено"
+              >
+                <Car size={20} />
+              </ActionIconBtn>
+
+              <ActionIconBtn
+                className="hide-on-mobile"
+                $color="#dc3545"
+                onClick={e => {
+                  e.stopPropagation();
+                  onDelete(file.id);
+                }}
+                title="Видалити"
+              >
+                <Trash2 size={20} />
+              </ActionIconBtn>
             </TarRow>
           </SwipeableListItem>
         ))}
