@@ -1,46 +1,47 @@
 import React from 'react';
 import { Star, Trash2, Edit, X } from 'lucide-react';
 import {
-  ActionBarWrapper,
-  SelectionInfo,
-  ActionButtons,
+  BarContainer,
+  ActionsGroup,
   ActionBtn,
+  CountBadge,
 } from './TarActionBar.styled';
 
 export const TarActionBar = ({
   selectedCount,
   onClearSelection,
   onBulkFavorite,
-  onEdit,
   onBulkDelete,
+  onEdit,
 }) => {
-  if (selectedCount === 0) return null;
-
   return (
-    <ActionBarWrapper>
-      <SelectionInfo>
+    <BarContainer $show={selectedCount > 0}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <ActionBtn onClick={onClearSelection} title="Скинути виділення">
-          <X size={20} />
+          <X size={20} color="#64748b" />
         </ActionBtn>
-        Виділено: {selectedCount}
-      </SelectionInfo>
+        <CountBadge>{selectedCount}</CountBadge>
+      </div>
 
-      <ActionButtons>
-        <ActionBtn onClick={onBulkFavorite} title="Змінити статус обраного">
-          <Star size={20} />
+      <ActionsGroup>
+        <ActionBtn onClick={onBulkFavorite}>
+          <Star size={20} color="#ffc107" />
+          <span>Зірка</span>
         </ActionBtn>
 
-        {/* Кнопка редагування активна тільки якщо виділено рівно 1 файл */}
+        {/* Редагувати показуємо тільки якщо виділено рівно 1 файл */}
         {selectedCount === 1 && (
-          <ActionBtn onClick={onEdit} title="Редагувати">
-            <Edit size={20} />
+          <ActionBtn onClick={onEdit}>
+            <Edit size={20} color="#17a2b8" />
+            <span>Редагувати</span>
           </ActionBtn>
         )}
 
-        <ActionBtn $danger onClick={onBulkDelete} title="Видалити">
-          <Trash2 size={20} />
+        <ActionBtn onClick={onBulkDelete}>
+          <Trash2 size={20} color="#dc3545" />
+          <span>Видалити</span>
         </ActionBtn>
-      </ActionButtons>
-    </ActionBarWrapper>
+      </ActionsGroup>
+    </BarContainer>
   );
 };
